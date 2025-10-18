@@ -10,6 +10,7 @@ import logging
 
 from app.core.config import settings
 from app.core.database import init_db
+from app.services.printer.queue_worker import PrintQueueWorker, set_worker
 
 # ============================================================================
 # ЛОГИРОВАНИЕ
@@ -42,7 +43,15 @@ async def lifespan(app: FastAPI):
     logger.info("📊 Инициализация базы данных...")
     init_db()
 
-    # TODO: Запуск print queue worker
+    # Запуск print queue worker
+    logger.info("🖨️  Запуск print queue worker...")
+    worker = PrintQueueWorker(
+        printer_host=settings.PRINTER_IP,
+        printer_port=settings.PRINTER_PORT
+    )
+    set_worker(worker)
+    await worker.start()
+
     # TODO: Запуск background tasks (синхронизация, архивация)
 
     logger.info("✅ Приложение запущено")
@@ -51,7 +60,12 @@ async def lifespan(app: FastAPI):
 
     # SHUTDOWN
     logger.info("🛑 Остановка приложения...")
-    # TODO: Graceful shutdown print queue
+
+    # Graceful shutdown print queue
+    worker = worker  # worker из scope выше
+    if worker:
+        await worker.stop()
+
     logger.info("✅ Приложение остановлено")
 
 
@@ -111,19 +125,22 @@ async def health_check():
 
 
 # ============================================================================
-# API ROUTERS (будут добавлены позже)
+# API ROUTERS
 # ============================================================================
 
-# from app.api import orders, webhook, print_api, templates, settings_api, users, auth, websocket
-#
-# app.include_router(auth.router)
-# app.include_router(orders.router)
-# app.include_router(webhook.router)
-# app.include_router(print_api.router)
+from app.api import print_api, webhook_api, orders_api, websocket_api, auth_api, settings_api
+
+app.include_router(print_api.router)
+app.include_router(webhook_api.router)
+app.include_router(orders_api.router)
+app.include_router(websocket_api.router)
+app.include_router(auth_api.router)
+app.include_router(settings_api.router)
+
+# TODO: Добавить остальные роутеры
+# from app.api import templates, users
 # app.include_router(templates.router)
-# app.include_router(settings_api.router)
 # app.include_router(users.router)
-# app.include_router(websocket.router)
 
 
 # ============================================================================
