@@ -2,6 +2,11 @@
 
 Автономный сервис печати этикеток для ресторанов сети Britannica Project. Работает в локальной сети, обеспечивает прослеживаемость продукции согласно требованиям СанПиН и ГОСТ.
 
+![Version](https://img.shields.io/badge/version-0.1.0-blue)
+![Python](https://img.shields.io/badge/python-3.11+-green)
+![React](https://img.shields.io/badge/react-18-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+
 ---
 
 ## 📋 Оглавление

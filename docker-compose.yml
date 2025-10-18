@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: britannica-backend
+    restart: unless-stopped
+    environment:
+      # Приложение
+      - APP_NAME=Britannica Labels
+      - APP_VERSION=0.1.0
+      - ENVIRONMENT=production
+
+      # База данных
+      - DATABASE_URL=sqlite:///./data/britannica_labels.db
+
+      # StoreHouse 5
+      - SH5_URL=${SH5_URL:-http://10.0.0.141:9797/api/sh5exec}
+      - SH5_USER=${SH5_USER:-Admin}
+      - SH5_PASS=${SH5_PASS}
+
+      # Принтер
+      - PRINTER_IP=${PRINTER_IP:-192.168.1.10}
+      - PRINTER_PORT=${PRINTER_PORT:-9100}
+      - PRINTER_TIMEOUT=${PRINTER_TIMEOUT:-5}
+
+      # Безопасность
+      - SECRET_KEY=${SECRET_KEY}
+
+      # Настройки
+      - TIMEZONE=${TIMEZONE:-Europe/Kiev}
+      - DEFAULT_SHELF_LIFE_HOURS=${DEFAULT_SHELF_LIFE_HOURS:-6}
+
+    volumes:
+      # Персистентное хранилище БД
+      - ./backend/data:/app/data
+
+      # Опционально: dishes_with_extras.sqlite (если нужен)
+      - ./dishes_with_extras.sqlite:/app/dishes_with_extras.sqlite:ro
+
+    networks:
+      - britannica-network
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: britannica-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - britannica-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  britannica-network:
+    driver: bridge
+
+volumes:
+  backend-data:
+    driver: local

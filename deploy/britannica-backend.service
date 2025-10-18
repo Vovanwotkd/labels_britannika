@@ -1,0 +1,38 @@
+[Unit]
+Description=Britannica Labels Backend Service
+Documentation=https://github.com/Vovanwotkd/labels_britannika
+After=network.target
+
+[Service]
+Type=simple
+User=britannica
+Group=britannica
+WorkingDirectory=/opt/labels_britannika/backend
+
+# Путь к virtual environment
+Environment="PATH=/opt/labels_britannika/backend/venv/bin:/usr/local/bin:/usr/bin:/bin"
+
+# Загружаем переменные из .env
+EnvironmentFile=/opt/labels_britannika/backend/.env
+
+# Команда запуска
+ExecStart=/opt/labels_britannika/backend/venv/bin/uvicorn app.main:app \
+    --host 0.0.0.0 \
+    --port 8000 \
+    --workers 2 \
+    --log-level info
+
+# Автоматический перезапуск при сбое
+Restart=always
+RestartSec=3
+
+# Ограничения ресурсов
+LimitNOFILE=65536
+
+# Логирование
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=britannica-backend
+
+[Install]
+WantedBy=multi-user.target
