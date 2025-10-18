@@ -40,14 +40,11 @@ venv.bak/
 *~
 .DS_Store
 
-# SQLite databases (рабочие файлы)
+# SQLite databases (все базы данных)
 *.sqlite
 *.db
 *.sqlite3
 !schema.sql
-
-# Исключение: храним мастер-базу
-!dishes_with_extras.sqlite
 
 # Логи
 *.log
