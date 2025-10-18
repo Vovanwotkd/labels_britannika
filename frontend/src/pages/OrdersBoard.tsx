@@ -1,0 +1,256 @@
+/**
+ * Orders Board Page
+ * Доска заказов с real-time обновлениями
+ */
+
+import { useState, useEffect, useCallback } from 'react'
+import { ordersApi } from '../api/client'
+import { useWebSocketMessage } from '../contexts/WebSocketContext'
+import type {
+  OrderListItem,
+  WSOrderUpdate,
+  WSPrintJobUpdate,
+} from '../types'
+import OrderCard from '../components/OrderCard'
+
+export default function OrdersBoard() {
+  const [orders, setOrders] = useState<OrderListItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [filter, setFilter] = useState<{
+    status?: string
+    table_code?: string
+  }>({})
+
+  // Загрузка заказов
+  const loadOrders = useCallback(async () => {
+    try {
+      setLoading(true)
+      const data = await ordersApi.getAll({
+        ...filter,
+        limit: 100,
+      })
+      setOrders(data)
+      setError(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка загрузки заказов')
+    } finally {
+      setLoading(false)
+    }
+  }, [filter])
+
+  useEffect(() => {
+    loadOrders()
+  }, [loadOrders])
+
+  // WebSocket: обновления заказов
+  useWebSocketMessage<WSOrderUpdate>('order_update', (message) => {
+    console.log('Order update:', message)
+
+    if (message.event === 'new_order') {
+      // Перезагружаем список
+      loadOrders()
+    } else if (message.event === 'order_updated') {
+      // Обновляем конкретный заказ
+      loadOrders()
+    } else if (message.event === 'order_cancelled') {
+      // Обновляем статус заказа
+      setOrders((prev) =>
+        prev.map((order) =>
+          order.id === message.order_id
+            ? { ...order, status: 'CANCELLED' }
+            : order
+        )
+      )
+    }
+  })
+
+  // WebSocket: обновления print jobs
+  useWebSocketMessage<WSPrintJobUpdate>('print_job_update', (message) => {
+    console.log('Print job update:', message)
+
+    // Обновляем статистику заказа
+    setOrders((prev) =>
+      prev.map((order) => {
+        // Нужно пересчитать jobs_done, jobs_failed
+        // Для простоты - перезагружаем весь заказ
+        return order
+      })
+    )
+
+    // Можно также перезагрузить весь список для точности
+    if (message.status === 'DONE' || message.status === 'FAILED') {
+      loadOrders()
+    }
+  })
+
+  const handleCancelOrder = async (orderId: number) => {
+    if (!confirm('Отменить заказ?')) return
+
+    try {
+      await ordersApi.cancel(orderId)
+      // Обновим локально
+      setOrders((prev) =>
+        prev.map((order) =>
+          order.id === orderId ? { ...order, status: 'CANCELLED' } : order
+        )
+      )
+    } catch (err) {
+      alert('Ошибка отмены заказа')
+      console.error(err)
+    }
+  }
+
+  const handleDeleteOrder = async (orderId: number) => {
+    if (!confirm('Удалить заказ из списка?')) return
+
+    try {
+      await ordersApi.delete(orderId)
+      // Удалим локально
+      setOrders((prev) => prev.filter((order) => order.id !== orderId))
+    } catch (err) {
+      alert('Ошибка удаления заказа')
+      console.error(err)
+    }
+  }
+
+  if (loading && orders.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-xl text-gray-600">Загрузка заказов...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-md bg-red-50 p-4">
+        <div className="text-sm text-red-800">{error}</div>
+        <button
+          onClick={loadOrders}
+          className="mt-2 text-sm text-red-600 underline"
+        >
+          Повторить
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold text-gray-900">Заказы</h1>
+
+        <button
+          onClick={loadOrders}
+          className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+        >
+          Обновить
+        </button>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white shadow rounded-lg p-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Статус
+            </label>
+            <select
+              value={filter.status || ''}
+              onChange={(e) =>
+                setFilter((prev) => ({
+                  ...prev,
+                  status: e.target.value || undefined,
+                }))
+              }
+              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+            >
+              <option value="">Все</option>
+              <option value="NOT_PRINTED">Не напечатано</option>
+              <option value="PRINTING">Печатается</option>
+              <option value="DONE">Готово</option>
+              <option value="FAILED">Ошибка</option>
+              <option value="CANCELLED">Отменено</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Стол
+            </label>
+            <input
+              type="text"
+              value={filter.table_code || ''}
+              onChange={(e) =>
+                setFilter((prev) => ({
+                  ...prev,
+                  table_code: e.target.value || undefined,
+                }))
+              }
+              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              placeholder="Код стола"
+            />
+          </div>
+
+          <div className="flex items-end">
+            <button
+              onClick={() => setFilter({})}
+              className="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+            >
+              Сбросить фильтры
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white shadow rounded-lg p-4">
+          <div className="text-sm text-gray-600">Всего заказов</div>
+          <div className="text-2xl font-bold text-gray-900">{orders.length}</div>
+        </div>
+
+        <div className="bg-white shadow rounded-lg p-4">
+          <div className="text-sm text-gray-600">Не напечатано</div>
+          <div className="text-2xl font-bold text-orange-600">
+            {orders.filter((o) => o.status === 'NOT_PRINTED').length}
+          </div>
+        </div>
+
+        <div className="bg-white shadow rounded-lg p-4">
+          <div className="text-sm text-gray-600">Готово</div>
+          <div className="text-2xl font-bold text-green-600">
+            {orders.filter((o) => o.status === 'DONE').length}
+          </div>
+        </div>
+
+        <div className="bg-white shadow rounded-lg p-4">
+          <div className="text-sm text-gray-600">Ошибки</div>
+          <div className="text-2xl font-bold text-red-600">
+            {orders.filter((o) => o.status === 'FAILED').length}
+          </div>
+        </div>
+      </div>
+
+      {/* Orders Grid */}
+      {orders.length === 0 ? (
+        <div className="text-center py-12 bg-white shadow rounded-lg">
+          <div className="text-gray-500">Заказов нет</div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {orders.map((order) => (
+            <OrderCard
+              key={order.id}
+              order={order}
+              onCancel={() => handleCancelOrder(order.id)}
+              onDelete={() => handleDeleteOrder(order.id)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
