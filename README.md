@@ -161,11 +161,41 @@
 
 ## 🚀 Установка
 
+⚠️ **ВАЖНО:** Прочитайте [SECURITY.md](SECURITY.md) перед началом! Credentials не должны попадать в git.
+
 ### 1. Клонирование репозитория
 
 ```bash
-git clone https://github.com/yourorg/britannica-labels.git
-cd britannica-labels
+git clone https://github.com/Vovanwotkd/-labels_britannika.git
+cd -labels_britannika
+```
+
+### 1.1. Настройка credentials
+
+```bash
+# Создайте .env из примера
+cp .env.example .env
+
+# Укажите свои данные
+nano .env
+```
+
+**Обязательно измените:**
+- `SH5_URL`, `SH5_USER`, `SH5_PASS` - доступ к Store House 5
+- `PRINTER_IP` - IP адрес вашего принтера
+- `SECRET_KEY` - сгенерируйте новый ключ:
+  ```bash
+  python -c "import secrets; print(secrets.token_hex(32))"
+  ```
+
+### 1.2. Создайте скрипт экспорта
+
+```bash
+# Скопируйте пример
+cp export_dishes_with_extras.py.example export_dishes_with_extras.py
+
+# Отредактируйте (или используйте .env)
+nano export_dishes_with_extras.py
 ```
 
 ### 2. Backend установка

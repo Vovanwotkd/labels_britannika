@@ -1,0 +1,91 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+ЭКСПОРТ ТОВАРОВ С ДОПОЛНИТЕЛЬНЫМИ ЭТИКЕТКАМИ (AddListSauce)
+Использует: asyncio + aiohttp + кеширование доп. товаров
+
+ВАЖНО: Это пример файла!
+Скопируйте его в export_dishes_with_extras.py и укажите свои credentials.
+"""
+
+import asyncio
+import aiohttp
+import sqlite3
+import json
+import time
+import signal
+import sys
+import re
+from typing import Dict, List, Any, Optional, Set
+from pathlib import Path
+from datetime import datetime
+import logging
+import os
+
+# ============================================================================
+# НАСТРОЙКИ (из переменных окружения или .env файла)
+# ============================================================================
+
+# API Store House 5
+SH_URL = os.getenv("SH5_URL", "http://YOUR_STOREHOUSE_IP:9797/api/sh5exec")
+SH_USER = os.getenv("SH5_USER", "Admin")
+SH_PASS = os.getenv("SH5_PASS", "YOUR_PASSWORD_HERE")
+
+# ПРОИЗВОДИТЕЛЬНОСТЬ
+MAX_CONCURRENT = int(os.getenv("MAX_CONCURRENT", "300"))
+REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "30"))
+MAX_RETRIES = int(os.getenv("MAX_RETRIES", "3"))
+RETRY_DELAYS = [0.5, 1, 2]
+
+# SQLite
+DB_FILE = os.getenv("DB_FILE", "dishes_with_extras.sqlite")
+BATCH_SIZE = 500
+PRAGMA_JOURNAL = "WAL"
+PRAGMA_SYNC = "NORMAL"
+PRAGMA_CACHE = 10000
+
+# ФИЛЬТРЫ
+ONLY_WITH_RKEEPER = True
+EXCLUDE_SEMIFINISHED = True
+
+# ОТКАЗОУСТОЙЧИВОСТЬ
+MAX_CONSECUTIVE_ERRORS = 100
+ERROR_RATE_THRESHOLD = 0.5
+ERROR_RATE_PAUSE = 15
+ENABLE_ADAPTIVE_THROTTLING = True
+MIN_WORKERS = 25
+
+# CHECKPOINT
+ENABLE_CHECKPOINT = True
+CHECKPOINT_INTERVAL = 1000
+CHECKPOINT_FILE = "export_extras_checkpoint.json"
+
+# ЛОГИРОВАНИЕ
+ERROR_LOG = "export_extras_errors.log"
+STATS_LOG = "export_extras_stats.log"
+
+# ============================================================================
+# ПРОВЕРКА CREDENTIALS
+# ============================================================================
+
+if SH_USER == "Admin" and SH_PASS == "YOUR_PASSWORD_HERE":
+    print("=" * 70)
+    print("ОШИБКА: Credentials не настроены!")
+    print("=" * 70)
+    print()
+    print("Пожалуйста, создайте файл .env со следующими настройками:")
+    print()
+    print("SH5_URL=http://10.0.0.141:9797/api/sh5exec")
+    print("SH5_USER=Admin")
+    print("SH5_PASS=ваш_пароль")
+    print()
+    print("Или скопируйте export_dishes_with_extras.py.example")
+    print("в export_dishes_with_extras.py и укажите credentials напрямую.")
+    print()
+    sys.exit(1)
+
+# ============================================================================
+# ОСТАЛЬНОЙ КОД (такой же как в оригинальном скрипте)
+# ============================================================================
+
+# ... (весь остальной код без изменений)
