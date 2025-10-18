@@ -1,0 +1,132 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+PIPFILE.lock
+poetry.lock
+
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# SQLite databases (рабочие файлы)
+*.sqlite
+*.db
+*.sqlite3
+!schema.sql
+
+# Исключение: храним мастер-базу
+!dishes_with_extras.sqlite
+
+# Логи
+*.log
+logs/
+*.log.*
+
+# Checkpoint файлы
+*checkpoint*.json
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Node.js (Frontend)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+package-lock.json
+yarn.lock
+
+# Build outputs
+frontend/dist/
+frontend/build/
+*.min.js
+*.min.css
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+
+# OS files
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Uploads (логотипы, временные файлы)
+uploads/*.bmp
+uploads/*.png
+uploads/*.jpg
+!uploads/.gitkeep
+
+# Print queue temporary files
+print_queue/*.tspl
+!print_queue/.gitkeep
+
+# Backup files
+backups/*.sqlite
+backups/*.sql
+!backups/.gitkeep
+
+# Documentation build artifacts (если будем генерировать docs)
+docs/_build/
+docs/.doctrees/
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# Pytest
+.pytest_cache/
+.tox/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Файлы для изучения (не нужны в production)
+westpower.fiji/
+XML (2)/
+
+# Системные файлы Windows
+*.lnk
+$RECYCLE.BIN/
