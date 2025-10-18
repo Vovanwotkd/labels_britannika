@@ -87,7 +87,7 @@
 │  Backend (FastAPI + Python):                            │
 │  ├─ Webhook receiver (RKeeper XML parser)               │
 │  ├─ SQLite (заказы, шаблоны, пользователи)             │
-│  ├─ dishes_with_extras.sqlite (мастер-база блюд)       │
+│  ├─ dishes_with_extras.sqlite (создаётся локально)     │
 │  ├─ TSPL renderer (Pillow, генерация команд)           │
 │  ├─ TCP:9100 printer client                            │
 │  └─ WebSocket server (real-time updates)               │
@@ -347,11 +347,14 @@ britannica-labels/
 │   ├── package.json
 │   └── vite.config.ts
 ├── export_dishes_with_extras.py   # Синхронизация SH5
-├── dishes_with_extras.sqlite      # Мастер-база блюд
+├── dishes_with_extras.sqlite      # Мастер-база блюд (создаётся скриптом)
 ├── README.md
 ├── IMPLEMENTATION.md              # Детальный план разработки
 └── .gitignore
 ```
+
+**Примечание:** Файлы для изучения (`westpower.fiji/`, `XML (2)/`) не включены в репозиторий.
+Они использовались для изучения интеграции с RKeeper и Bitrix, но не нужны для работы сервиса.
 
 ### Запуск в dev режиме
 
