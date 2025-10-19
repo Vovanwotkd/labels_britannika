@@ -30,7 +30,8 @@ services:
       - SECRET_KEY=${SECRET_KEY}
 
       # Настройки
-      - TIMEZONE=${TIMEZONE:-Europe/Kiev}
+      - TIMEZONE=${TIMEZONE:-Europe/Kaliningrad}
+      - TZ=${TIMEZONE:-Europe/Kaliningrad}
       - DEFAULT_SHELF_LIFE_HOURS=${DEFAULT_SHELF_LIFE_HOURS:-6}
 
     volumes:
