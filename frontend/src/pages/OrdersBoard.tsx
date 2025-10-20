@@ -148,11 +148,11 @@ export default function OrdersBoard() {
   return (
     <div className="space-y-6">
       {/* Header with Status filter */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center relative z-20">
         <div className="flex items-center gap-6">
           <h1 className="text-3xl font-bold text-gray-900">Заказы</h1>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 relative">
             <label className="text-sm font-medium text-gray-700">Статус</label>
             <select
               value={filter.status || ''}
@@ -162,7 +162,7 @@ export default function OrdersBoard() {
                   status: e.target.value || undefined,
                 }))
               }
-              className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white"
+              className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white relative z-10"
             >
               <option value="">Все</option>
               <option value="NOT_PRINTED">Не напечатано</option>
