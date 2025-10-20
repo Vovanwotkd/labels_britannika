@@ -147,9 +147,32 @@ export default function OrdersBoard() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header with Status filter */}
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Заказы</h1>
+        <div className="flex items-center gap-6">
+          <h1 className="text-3xl font-bold text-gray-900">Заказы</h1>
+
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700">Статус</label>
+            <select
+              value={filter.status || ''}
+              onChange={(e) =>
+                setFilter((prev) => ({
+                  ...prev,
+                  status: e.target.value || undefined,
+                }))
+              }
+              className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white"
+            >
+              <option value="">Все</option>
+              <option value="NOT_PRINTED">Не напечатано</option>
+              <option value="PRINTING">Печатается</option>
+              <option value="DONE">Готово</option>
+              <option value="FAILED">Ошибка</option>
+              <option value="CANCELLED">Отменено</option>
+            </select>
+          </div>
+        </div>
 
         <div className="flex gap-3">
           <button
@@ -163,55 +186,6 @@ export default function OrdersBoard() {
             className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
           >
             Обновить
-          </button>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white shadow rounded-lg p-4">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700">Статус</label>
-            <select
-              value={filter.status || ''}
-              onChange={(e) =>
-                setFilter((prev) => ({
-                  ...prev,
-                  status: e.target.value || undefined,
-                }))
-              }
-              className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-            >
-              <option value="">Все</option>
-              <option value="NOT_PRINTED">Не напечатано</option>
-              <option value="PRINTING">Печатается</option>
-              <option value="DONE">Готово</option>
-              <option value="FAILED">Ошибка</option>
-              <option value="CANCELLED">Отменено</option>
-            </select>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700">Стол</label>
-            <input
-              type="text"
-              value={filter.table_code || ''}
-              onChange={(e) =>
-                setFilter((prev) => ({
-                  ...prev,
-                  table_code: e.target.value || undefined,
-                }))
-              }
-              className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              placeholder="Код стола"
-            />
-          </div>
-
-          <button
-            onClick={() => setFilter({})}
-            className="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-          >
-            Сбросить фильтры
           </button>
         </div>
       </div>
