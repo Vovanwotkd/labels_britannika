@@ -48,18 +48,33 @@ export default function Layout() {
               </NavLink>
 
               {user?.role === 'admin' && (
-                <NavLink
-                  to="/settings"
-                  className={({ isActive }) =>
-                    `px-3 py-2 rounded-md text-sm font-medium ${
-                      isActive
-                        ? 'bg-primary-100 text-primary-700'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`
-                  }
-                >
-                  Настройки
-                </NavLink>
+                <>
+                  <NavLink
+                    to="/templates"
+                    className={({ isActive }) =>
+                      `px-3 py-2 rounded-md text-sm font-medium ${
+                        isActive
+                          ? 'bg-primary-100 text-primary-700'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      }`
+                    }
+                  >
+                    Шаблоны
+                  </NavLink>
+
+                  <NavLink
+                    to="/settings"
+                    className={({ isActive }) =>
+                      `px-3 py-2 rounded-md text-sm font-medium ${
+                        isActive
+                          ? 'bg-primary-100 text-primary-700'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      }`
+                    }
+                  >
+                    Настройки
+                  </NavLink>
+                </>
               )}
             </nav>
 

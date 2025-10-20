@@ -246,3 +246,53 @@ export const rkeeperApi = {
       body: JSON.stringify({ tables }),
     }),
 }
+
+// ============================================================================
+// Templates API
+// ============================================================================
+
+interface TemplateConfig {
+  paper_width_mm: number
+  paper_height_mm: number
+  paper_gap_mm: number
+  shelf_life_hours: number
+  [key: string]: any
+}
+
+interface Template {
+  id: number
+  name: string
+  brand_id: string
+  is_default: boolean
+  config: TemplateConfig
+  created_at?: string
+  updated_at?: string
+}
+
+export const templatesApi = {
+  getAll: () => fetchApi<Template[]>('/templates/'),
+
+  getById: (id: number) => fetchApi<Template>(`/templates/${id}`),
+
+  create: (template: Omit<Template, 'id' | 'created_at' | 'updated_at'>) =>
+    fetchApi<Template>('/templates/', {
+      method: 'POST',
+      body: JSON.stringify(template),
+    }),
+
+  update: (id: number, template: Partial<Template>) =>
+    fetchApi<Template>(`/templates/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(template),
+    }),
+
+  delete: (id: number) =>
+    fetchApi(`/templates/${id}`, {
+      method: 'DELETE',
+    }),
+
+  setDefault: (id: number) =>
+    fetchApi(`/templates/${id}/set-default`, {
+      method: 'POST',
+    }),
+}
