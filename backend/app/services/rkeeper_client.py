@@ -5,7 +5,9 @@ RKeeper 7 XML API Client
 import httpx
 import xml.etree.ElementTree as ET
 from typing import List, Dict, Optional
-from ..core.config import get_setting
+from sqlalchemy.orm import Session
+from ..models.setting import Setting
+from ..core.database import SessionLocal
 
 
 class RKeeperClient:
@@ -16,11 +18,20 @@ class RKeeperClient:
         self.username = None
         self.password = None
 
+    def _get_setting_value(self, db: Session, key: str, default: str = "") -> str:
+        """Получает значение настройки из БД"""
+        setting = db.query(Setting).filter(Setting.key == key).first()
+        return setting.value if setting and setting.value else default
+
     async def _load_config(self):
         """Загружает конфигурацию из настроек"""
-        self.base_url = await get_setting("rkeeper_url")
-        self.username = await get_setting("rkeeper_user")
-        self.password = await get_setting("rkeeper_pass")
+        db = SessionLocal()
+        try:
+            self.base_url = self._get_setting_value(db, "rkeeper_url")
+            self.username = self._get_setting_value(db, "rkeeper_user")
+            self.password = self._get_setting_value(db, "rkeeper_pass")
+        finally:
+            db.close()
 
     async def _send_request(self, xml_body: str) -> ET.Element:
         """
