@@ -48,7 +48,10 @@ async def test_http_connection(url: str, username: str = None, password: str = N
     try:
         auth = aiohttp.BasicAuth(username, password) if username and password else None
 
-        async with aiohttp.ClientSession(auth=auth, timeout=aiohttp.ClientTimeout(total=timeout)) as session:
+        # Отключаем проверку SSL сертификатов для самоподписанных сертификатов
+        connector = aiohttp.TCPConnector(ssl=False)
+
+        async with aiohttp.ClientSession(auth=auth, timeout=aiohttp.ClientTimeout(total=timeout), connector=connector) as session:
             async with session.get(url) as response:
                 return TestResponse(
                     success=True,
