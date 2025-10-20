@@ -5,6 +5,7 @@ Templates API
 
 import logging
 from typing import List, Optional
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -48,11 +49,14 @@ class TemplateSchema(BaseModel):
     brand_id: Optional[str]
     is_default: bool
     config: dict
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
+        json_encoders = {
+            datetime: lambda v: v.isoformat() if v else None
+        }
 
 
 class TemplateCreateRequest(BaseModel):
