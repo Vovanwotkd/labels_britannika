@@ -64,13 +64,16 @@ services:
     container_name: britannica-sync
     restart: unless-stopped
     environment:
-      - SH5_URL=${SH5_URL:-http://10.0.0.141:9797/api/sh5exec}
-      - SH5_USER=${SH5_USER:-Admin}
-      - SH5_PASS=${SH5_PASS}
+      - BACKEND_DB_PATH=/app/data/britannica_labels.db
     volumes:
+      # Доступ к БД backend для чтения настроек
+      - ./backend/data:/app/data:ro
+      # SQLite для экспорта товаров (read-write)
       - ./backend/dishes_with_extras.sqlite:/app/dishes_with_extras.sqlite
     networks:
       - britannica-network
+    depends_on:
+      - backend
     command: >
       sh -c "while true; do
         echo '[$(date)] Starting dishes sync...'

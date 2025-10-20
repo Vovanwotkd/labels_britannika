@@ -285,3 +285,29 @@ export const templatesApi = {
       method: 'POST',
     }),
 }
+
+// ============================================================================
+// Sync API
+// ============================================================================
+
+export interface SyncStatus {
+  last_sync: string | null
+  last_error: string | null
+  interval_hours: number
+}
+
+export interface SyncTriggerResponse {
+  status: string
+  message: string
+  pid: number
+  started_at: string
+}
+
+export const syncApi = {
+  getStatus: () => fetchApi<SyncStatus>('/sync/status'),
+
+  trigger: () =>
+    fetchApi<SyncTriggerResponse>('/sync/trigger', {
+      method: 'POST',
+    }),
+}

@@ -105,6 +105,11 @@ def create_default_settings():
             value=None,
             description="Последняя ошибка синхронизации"
         ),
+        Setting(
+            key="sync_interval_hours",
+            value="24",
+            description="Интервал синхронизации с StoreHouse 5 (часы)"
+        ),
         # RKeeper
         Setting(
             key="rkeeper_url",

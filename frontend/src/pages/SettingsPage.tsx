@@ -4,8 +4,9 @@
  */
 
 import { useState, useEffect } from 'react'
-import { settingsApi, testConnectionApi } from '../api/client'
+import { settingsApi, testConnectionApi, syncApi } from '../api/client'
 import type { SystemInfo } from '../types'
+import type { SyncStatus } from '../api/client'
 
 export default function SettingsPage() {
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null)
@@ -16,6 +17,10 @@ export default function SettingsPage() {
   const [testingPrinter, setTestingPrinter] = useState(false)
   const [testingStorehouse, setTestingStorehouse] = useState(false)
   const [testingRKeeper, setTestingRKeeper] = useState(false)
+
+  // Состояния синхронизации
+  const [syncing, setSyncing] = useState(false)
+  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null)
 
   // Редактируемые настройки
   const [printerIp, setPrinterIp] = useState('')
@@ -30,9 +35,11 @@ export default function SettingsPage() {
   const [rkUser, setRkUser] = useState('')
   const [rkPass, setRkPass] = useState('')
   const [defaultTemplateId, setDefaultTemplateId] = useState('')
+  const [syncIntervalHours, setSyncIntervalHours] = useState('')
 
   useEffect(() => {
     loadSystemInfo()
+    loadSyncStatus()
   }, [])
 
   const loadSystemInfo = async () => {
@@ -61,6 +68,16 @@ export default function SettingsPage() {
     }
   }
 
+  const loadSyncStatus = async () => {
+    try {
+      const data = await syncApi.getStatus()
+      setSyncStatus(data)
+      setSyncIntervalHours(data.interval_hours.toString())
+    } catch (error) {
+      console.error('Failed to load sync status:', error)
+    }
+  }
+
   const saveSettings = async () => {
     try {
       setSaving(true)
@@ -78,17 +95,36 @@ export default function SettingsPage() {
         { key: 'rkeeper_user', value: rkUser },
         { key: 'rkeeper_pass', value: rkPass },
         { key: 'default_template_id', value: defaultTemplateId },
+        { key: 'sync_interval_hours', value: syncIntervalHours },
       ]
 
       await settingsApi.updateSettingsBatch(settings)
 
       alert('Настройки сохранены успешно!')
       loadSystemInfo()
+      loadSyncStatus()
     } catch (error) {
       console.error('Failed to save settings:', error)
       alert('Ошибка сохранения настроек')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const triggerSync = async () => {
+    if (!confirm('Запустить синхронизацию с StoreHouse 5?')) {
+      return
+    }
+
+    try {
+      setSyncing(true)
+      const result = await syncApi.trigger()
+      alert(`Синхронизация запущена!\n${result.message}`)
+      loadSyncStatus()
+    } catch (error: any) {
+      alert(`Ошибка: ${error.message}`)
+    } finally {
+      setSyncing(false)
     }
   }
 
@@ -315,15 +351,63 @@ export default function SettingsPage() {
               />
             </div>
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Интервал синхронизации (часы)
+            </label>
+            <input
+              type="number"
+              value={syncIntervalHours}
+              onChange={(e) => setSyncIntervalHours(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+              placeholder="24"
+              min="1"
+              max="168"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Как часто автоматически синхронизировать товары (от 1 до 168 часов)
+            </p>
+          </div>
+
+          {syncStatus && (
+            <div className="bg-gray-50 rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-2">Статус синхронизации</h3>
+              <dl className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <dt className="text-gray-600">Последняя синхронизация:</dt>
+                  <dd className="text-gray-900">
+                    {syncStatus.last_sync
+                      ? new Date(syncStatus.last_sync).toLocaleString('ru-RU')
+                      : 'Никогда'}
+                  </dd>
+                </div>
+                {syncStatus.last_error && (
+                  <div className="flex justify-between">
+                    <dt className="text-red-600">Последняя ошибка:</dt>
+                    <dd className="text-red-900 text-xs">{syncStatus.last_error}</dd>
+                  </div>
+                )}
+              </dl>
+            </div>
+          )}
         </div>
 
-        <div className="mt-4">
+        <div className="mt-4 flex gap-3">
           <button
             onClick={testStorehouseConnection}
             disabled={testingStorehouse}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {testingStorehouse ? 'Проверка...' : 'Проверить связь'}
+          </button>
+
+          <button
+            onClick={triggerSync}
+            disabled={syncing}
+            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {syncing ? 'Синхронизация...' : 'Синхронизировать сейчас'}
           </button>
         </div>
       </div>
