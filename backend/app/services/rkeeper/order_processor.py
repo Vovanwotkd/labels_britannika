@@ -131,31 +131,27 @@ class OrderProcessor:
         """
         from app.models import TableFilter
 
-        # Получаем фильтры
-        filters = self.db.query(TableFilter).filter(
-            TableFilter.is_active == True
-        ).all()
+        # Получаем активные фильтры для данного стола
+        filter_entry = self.db.query(TableFilter).filter(
+            TableFilter.table_code == table_code,
+            TableFilter.enabled == True
+        ).first()
 
-        if not filters:
-            # Фильтров нет - обрабатываем все столы
+        if filter_entry:
+            # Стол найден в фильтре и активен - обрабатываем
             return True
 
-        # Проверяем попадает ли стол в фильтры
-        for f in filters:
-            if f.filter_type == "include":
-                # Include: обрабатываем только указанные столы
-                if table_code in f.table_codes:
-                    return True
-            elif f.filter_type == "exclude":
-                # Exclude: пропускаем указанные столы
-                if table_code in f.table_codes:
-                    return False
+        # Проверяем, есть ли вообще какие-то фильтры в базе
+        any_filters = self.db.query(TableFilter).filter(
+            TableFilter.enabled == True
+        ).count()
 
-        # Если есть хотя бы один include фильтр и стол не попал ни в один - пропускаем
-        has_include = any(f.filter_type == "include" for f in filters)
-        if has_include:
+        if any_filters > 0:
+            # Фильтры есть, но данного стола в них нет - пропускаем
+            logger.info(f"⏭️  Table {table_code} not in selected tables, skipping")
             return False
 
+        # Фильтров нет вообще - обрабатываем все столы
         return True
 
     def _get_or_create_order(

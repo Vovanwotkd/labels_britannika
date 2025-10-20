@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { ordersApi } from '../api/client'
+import { ordersApi, rkeeperApi } from '../api/client'
 import { useWebSocketMessage } from '../contexts/WebSocketContext'
 import type {
   OrderListItem,
@@ -12,6 +12,7 @@ import type {
   WSPrintJobUpdate,
 } from '../types'
 import OrderCard from '../components/OrderCard'
+import TableSelectorModal from '../components/TableSelectorModal'
 
 export default function OrdersBoard() {
   const [orders, setOrders] = useState<OrderListItem[]>([])
@@ -21,6 +22,7 @@ export default function OrdersBoard() {
     status?: string
     table_code?: string
   }>({})
+  const [isTableModalOpen, setIsTableModalOpen] = useState(false)
 
   // Загрузка заказов
   const loadOrders = useCallback(async () => {
@@ -114,6 +116,13 @@ export default function OrdersBoard() {
     }
   }
 
+  const handleSaveTables = async (
+    selectedTables: Array<{ code: string; name: string }>
+  ) => {
+    await rkeeperApi.saveTables(selectedTables)
+    alert(`Сохранено ${selectedTables.length} столов`)
+  }
+
   if (loading && orders.length === 0) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -142,12 +151,20 @@ export default function OrdersBoard() {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-gray-900">Заказы</h1>
 
-        <button
-          onClick={loadOrders}
-          className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
-        >
-          Обновить
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setIsTableModalOpen(true)}
+            className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
+            Выбрать столы
+          </button>
+          <button
+            onClick={loadOrders}
+            className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
+            Обновить
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -251,6 +268,13 @@ export default function OrdersBoard() {
           ))}
         </div>
       )}
+
+      {/* Table Selector Modal */}
+      <TableSelectorModal
+        isOpen={isTableModalOpen}
+        onClose={() => setIsTableModalOpen(false)}
+        onSave={handleSaveTables}
+      />
     </div>
   )
 }

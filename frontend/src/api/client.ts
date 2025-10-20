@@ -222,3 +222,27 @@ export const testConnectionApi = {
       method: 'POST',
     }),
 }
+
+// ============================================================================
+// RKeeper API
+// ============================================================================
+
+interface RKeeperTable {
+  code: string
+  name: string
+  ident?: string
+  status?: string
+  hall?: string
+}
+
+export const rkeeperApi = {
+  getTables: () => fetchApi<RKeeperTable[]>('/rkeeper/tables'),
+
+  getSelectedTables: () => fetchApi<RKeeperTable[]>('/rkeeper/tables/selected'),
+
+  saveTables: (tables: Array<{ code: string; name: string }>) =>
+    fetchApi('/rkeeper/tables/save', {
+      method: 'POST',
+      body: JSON.stringify({ tables }),
+    }),
+}
