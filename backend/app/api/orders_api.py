@@ -63,7 +63,7 @@ class OrderSchema(BaseModel):
     table_code: str
     status: str
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime]
     items: List[OrderItemSchema]
 
     class Config:
@@ -78,7 +78,7 @@ class OrderListItemSchema(BaseModel):
     table_code: str
     status: str
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime]
     items_count: int
     jobs_count: int
     jobs_done: int
