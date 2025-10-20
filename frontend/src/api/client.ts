@@ -251,23 +251,7 @@ export const rkeeperApi = {
 // Templates API
 // ============================================================================
 
-interface TemplateConfig {
-  paper_width_mm: number
-  paper_height_mm: number
-  paper_gap_mm: number
-  shelf_life_hours: number
-  [key: string]: any
-}
-
-interface Template {
-  id: number
-  name: string
-  brand_id: string
-  is_default: boolean
-  config: TemplateConfig
-  created_at?: string
-  updated_at?: string
-}
+import type { Template } from '../components/TemplateEditor/types'
 
 export const templatesApi = {
   getAll: () => fetchApi<Template[]>('/templates/'),

@@ -46,41 +46,47 @@ export default function TemplateEditor({
   }
 
   const createDefaultElement = (type: ElementType): TemplateElement => {
-    const base = {
-      id: generateId(),
-      type,
-      position: { x: 10, y: 10 },
-      size: { width: 40, height: 10 },
-      visible: true,
-    }
+    const id = generateId()
+    const position = { x: 10, y: 10 }
+    const size = { width: 40, height: 10 }
+    const visible = true
 
     switch (type) {
       case 'logo':
-        return { ...base, type: 'logo' }
+        return { id, type: 'logo', position, size, visible } as LogoElement
       case 'text':
         return {
-          ...base,
+          id,
           type: 'text',
+          position,
+          size,
+          visible,
           content: 'Текст',
           fontSize: 14,
           fontFamily: 'Arial',
           fontWeight: 'normal',
           color: '#000000',
           align: 'left',
-        }
+        } as TextElement
       case 'composition':
         return {
-          ...base,
+          id,
           type: 'composition',
+          position,
+          size,
+          visible,
           fontSize: 10,
           fontFamily: 'Arial',
           color: '#000000',
           maxLines: 3,
-        }
+        } as CompositionElement
       case 'bju':
         return {
-          ...base,
+          id,
           type: 'bju',
+          position,
+          size,
+          visible,
           fontSize: 10,
           fontFamily: 'Arial',
           color: '#000000',
@@ -88,37 +94,58 @@ export default function TemplateEditor({
           showFats: true,
           showCarbs: true,
           showCalories: true,
-        }
+        } as BJUElement
       case 'weight':
         return {
-          ...base,
+          id,
           type: 'weight',
+          position,
+          size,
+          visible,
           fontSize: 12,
           fontFamily: 'Arial',
           color: '#000000',
           showUnit: true,
-        }
+        } as WeightElement
       case 'datetime':
         return {
-          ...base,
+          id,
           type: 'datetime',
+          position,
+          size,
+          visible,
           fontSize: 10,
           fontFamily: 'Arial',
           color: '#000000',
           format: 'datetime',
           label: 'Дата производства:',
-        }
+        } as DateTimeElement
       case 'shelf_life':
         return {
-          ...base,
+          id,
           type: 'shelf_life',
+          position,
+          size,
+          visible,
           fontSize: 10,
           fontFamily: 'Arial',
           color: '#000000',
           hours: 6,
-        }
+        } as ShelfLifeElement
       default:
-        return base as any
+        return {
+          id,
+          type: 'text',
+          position,
+          size,
+          visible,
+          content: '',
+          fontSize: 12,
+          fontFamily: 'Arial',
+          fontWeight: 'normal',
+          color: '#000000',
+          align: 'left',
+        } as TextElement
     }
   }
 
