@@ -3,7 +3,7 @@
  * Доска заказов с real-time обновлениями
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { ordersApi, rkeeperApi } from '../api/client'
 import { useWebSocketMessage } from '../contexts/WebSocketContext'
 import type {
@@ -23,6 +23,22 @@ export default function OrdersBoard() {
     table_code?: string
   }>({})
   const [isTableModalOpen, setIsTableModalOpen] = useState(false)
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Закрытие dropdown при клике вне его области
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsStatusDropdownOpen(false)
+      }
+    }
+
+    if (isStatusDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isStatusDropdownOpen])
 
   // Загрузка заказов
   const loadOrders = useCallback(async () => {
@@ -154,23 +170,55 @@ export default function OrdersBoard() {
 
           <div className="flex items-center gap-2 relative">
             <label className="text-sm font-medium text-gray-700">Статус</label>
-            <select
-              value={filter.status || ''}
-              onChange={(e) =>
-                setFilter((prev) => ({
-                  ...prev,
-                  status: e.target.value || undefined,
-                }))
-              }
-              className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white relative z-10"
-            >
-              <option value="">Все</option>
-              <option value="NOT_PRINTED">Не напечатано</option>
-              <option value="PRINTING">Печатается</option>
-              <option value="DONE">Готово</option>
-              <option value="FAILED">Ошибка</option>
-              <option value="CANCELLED">Отменено</option>
-            </select>
+            <div className="relative" ref={dropdownRef}>
+              <button
+                type="button"
+                onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+                className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white min-w-[180px] text-left flex justify-between items-center"
+              >
+                <span>
+                  {filter.status === 'NOT_PRINTED' && 'Не напечатано'}
+                  {filter.status === 'PRINTING' && 'Печатается'}
+                  {filter.status === 'DONE' && 'Готово'}
+                  {filter.status === 'FAILED' && 'Ошибка'}
+                  {filter.status === 'CANCELLED' && 'Отменено'}
+                  {!filter.status && 'Все'}
+                </span>
+                <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {isStatusDropdownOpen && (
+                <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg z-50">
+                  {[
+                    { value: '', label: 'Все' },
+                    { value: 'NOT_PRINTED', label: 'Не напечатано' },
+                    { value: 'PRINTING', label: 'Печатается' },
+                    { value: 'DONE', label: 'Готово' },
+                    { value: 'FAILED', label: 'Ошибка' },
+                    { value: 'CANCELLED', label: 'Отменено' },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => {
+                        setFilter((prev) => ({
+                          ...prev,
+                          status: option.value || undefined,
+                        }))
+                        setIsStatusDropdownOpen(false)
+                      }}
+                      className={`w-full text-left px-3 py-2 hover:bg-gray-100 ${
+                        (filter.status || '') === option.value ? 'bg-primary-50 text-primary-700' : ''
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
