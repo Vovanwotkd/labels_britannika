@@ -367,6 +367,11 @@ async def get_system_info(
             "ip": get_setting_value("printer_ip", config.PRINTER_IP),
             "port": int(get_setting_value("printer_port", str(config.PRINTER_PORT))),
         },
+        "label": {
+            "width": int(get_setting_value("label_width", str(config.DEFAULT_PAPER_WIDTH))),
+            "height": int(get_setting_value("label_height", str(config.DEFAULT_PAPER_HEIGHT))),
+            "gap": int(get_setting_value("label_gap", str(config.DEFAULT_PAPER_GAP))),
+        },
         "storehouse": {
             "url": get_setting_value("sh5_url", ""),
             "user": get_setting_value("sh5_user", ""),

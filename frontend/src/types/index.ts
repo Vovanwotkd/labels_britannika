@@ -148,6 +148,11 @@ export interface SystemInfo {
     ip: string
     port: number
   }
+  label: {
+    width: number
+    height: number
+    gap: number
+  }
   storehouse: {
     url: string
     user: string

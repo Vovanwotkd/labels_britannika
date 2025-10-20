@@ -64,6 +64,21 @@ def create_default_settings():
             value="9100",
             description="Порт принтера (TCP)"
         ),
+        Setting(
+            key="label_width",
+            value="60",
+            description="Ширина этикетки (мм)"
+        ),
+        Setting(
+            key="label_height",
+            value="60",
+            description="Высота этикетки (мм)"
+        ),
+        Setting(
+            key="label_gap",
+            value="2",
+            description="Отступ между этикетками (мм)"
+        ),
         # StoreHouse 5
         Setting(
             key="sh5_url",
