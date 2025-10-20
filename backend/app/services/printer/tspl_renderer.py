@@ -6,6 +6,7 @@ TSPL Renderer - генерация TSPL команд для принтера PC-
 from typing import Dict, Any, List
 from datetime import datetime, timedelta
 import logging
+from app.services.printer.bitmap_renderer import BitmapRenderer
 
 logger = logging.getLogger(__name__)
 
@@ -97,10 +98,9 @@ class TSPLRenderer:
             pass
 
         # ====================================================================
-        # НАЗВАНИЕ БЛЮДА
+        # НАЗВАНИЕ БЛЮДА (используем BITMAP для кириллицы)
         # ====================================================================
         title_config = self.config.get("title", {})
-        title_font = title_config.get("font", "3")
         title_x = title_config.get("x", 10)
         title_y = title_config.get("y", 30)
 
@@ -110,43 +110,56 @@ class TSPLRenderer:
         if len(title_text) > max_title_length:
             title_text = title_text[:max_title_length-3] + "..."
 
-        tspl_commands.append(
-            f'TEXT {title_x},{title_y},"{title_font}",0,1,1,"{self._escape_text(title_text)}"'
+        # Рендерим в bitmap для поддержки кириллицы
+        title_bitmap = BitmapRenderer.text_to_bitmap_tspl(
+            text=title_text,
+            x=title_x,
+            y=title_y,
+            font_size=24,  # Крупный шрифт для заголовка
+            width=400
         )
+        tspl_commands.append(title_bitmap)
 
         # ====================================================================
-        # ВЕС И КАЛОРИИ
+        # ВЕС И КАЛОРИИ (используем BITMAP для кириллицы)
         # ====================================================================
         wc_config = self.config.get("weight_calories", {})
-        wc_font = wc_config.get("font", "2")
         wc_x = wc_config.get("x", 10)
         wc_y = wc_config.get("y", 60)
 
         wc_text = f'Вес: {dish_data["weight_g"]}г | {dish_data["calories"]} ккал'
-        tspl_commands.append(
-            f'TEXT {wc_x},{wc_y},"{wc_font}",0,1,1,"{self._escape_text(wc_text)}"'
+        wc_bitmap = BitmapRenderer.text_to_bitmap_tspl(
+            text=wc_text,
+            x=wc_x,
+            y=wc_y,
+            font_size=16,
+            width=400
         )
+        tspl_commands.append(wc_bitmap)
 
         # ====================================================================
-        # БЖУ (если включено)
+        # БЖУ (если включено) (используем BITMAP для кириллицы)
         # ====================================================================
         bju_config = self.config.get("bju", {})
         if bju_config.get("enabled", True):
-            bju_font = bju_config.get("font", "2")
             bju_x = bju_config.get("x", 10)
             bju_y = bju_config.get("y", 80)
 
             bju_text = f'Б:{dish_data["protein"]:.0f}г Ж:{dish_data["fat"]:.0f}г У:{dish_data["carbs"]:.0f}г'
-            tspl_commands.append(
-                f'TEXT {bju_x},{bju_y},"{bju_font}",0,1,1,"{self._escape_text(bju_text)}"'
+            bju_bitmap = BitmapRenderer.text_to_bitmap_tspl(
+                text=bju_text,
+                x=bju_x,
+                y=bju_y,
+                font_size=16,
+                width=400
             )
+            tspl_commands.append(bju_bitmap)
 
         # ====================================================================
-        # СОСТАВ (если включено и есть ингредиенты)
+        # СОСТАВ (если включено и есть ингредиенты) (используем BITMAP)
         # ====================================================================
         ing_config = self.config.get("ingredients", {})
         if ing_config.get("enabled", True) and dish_data.get("ingredients"):
-            ing_font = ing_config.get("font", "1")
             ing_x = ing_config.get("x", 10)
             ing_y = ing_config.get("y", 100)
             max_lines = ing_config.get("max_lines", 3)
@@ -159,27 +172,42 @@ class TSPLRenderer:
             if len(ingredients_text) > max_ing_length:
                 ingredients_text = ingredients_text[:max_ing_length-3] + "..."
 
-            tspl_commands.append(
-                f'TEXT {ing_x},{ing_y},"{ing_font}",0,1,1,"Состав: {self._escape_text(ingredients_text)}"'
+            ing_bitmap = BitmapRenderer.text_to_bitmap_tspl(
+                text=f"Состав: {ingredients_text}",
+                x=ing_x,
+                y=ing_y,
+                font_size=14,
+                width=420
             )
+            tspl_commands.append(ing_bitmap)
 
         # ====================================================================
-        # ДАТА ПЕЧАТИ И СРОК ГОДНОСТИ
+        # ДАТА ПЕЧАТИ И СРОК ГОДНОСТИ (используем BITMAP)
         # ====================================================================
         dt_config = self.config.get("datetime_shelf", {})
-        dt_font = dt_config.get("font", "2")
         dt_x = dt_config.get("x", 10)
         dt_y = dt_config.get("y", 140)
 
         date_str = now.strftime("%d.%m %H:%M")
         shelf_str = shelf_life.strftime("%d.%m %H:%M")
 
-        tspl_commands.append(
-            f'TEXT {dt_x},{dt_y},"{dt_font}",0,1,1,"Изготовлено: {date_str}"'
+        date_bitmap = BitmapRenderer.text_to_bitmap_tspl(
+            text=f"Изготовлено: {date_str}",
+            x=dt_x,
+            y=dt_y,
+            font_size=16,
+            width=400
         )
-        tspl_commands.append(
-            f'TEXT {dt_x},{dt_y + 20},"{dt_font}",0,1,1,"Годен до: {shelf_str}"'
+        tspl_commands.append(date_bitmap)
+
+        shelf_bitmap = BitmapRenderer.text_to_bitmap_tspl(
+            text=f"Годен до: {shelf_str}",
+            x=dt_x,
+            y=dt_y + 20,
+            font_size=16,
+            width=400
         )
+        tspl_commands.append(shelf_bitmap)
 
         # ====================================================================
         # ШТРИХ-КОД
