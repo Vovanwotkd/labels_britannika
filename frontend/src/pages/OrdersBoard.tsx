@@ -148,7 +148,7 @@ export default function OrdersBoard() {
   return (
     <div className="space-y-6">
       {/* Header with Status filter */}
-      <div className="flex justify-between items-center relative z-20">
+      <div className="flex justify-between items-center mb-10 relative z-20">
         <div className="flex items-center gap-6">
           <h1 className="text-3xl font-bold text-gray-900">Заказы</h1>
 
