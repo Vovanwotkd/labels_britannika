@@ -13,6 +13,13 @@ import {
   ElementType,
   Position,
   TemplateConfig,
+  LogoElement,
+  TextElement,
+  CompositionElement,
+  BJUElement,
+  WeightElement,
+  DateTimeElement,
+  ShelfLifeElement,
 } from './types'
 
 interface TemplateEditorProps {
