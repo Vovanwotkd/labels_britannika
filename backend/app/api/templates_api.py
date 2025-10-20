@@ -312,15 +312,43 @@ async def test_print_template(
         renderer = TSPLRenderer(template.config)
         tspl_code = renderer.render(test_dish_data)
 
+        # Для тестовой печати создаём временный заказ
+        from app.models import Order, OrderItem
+
+        # Создаём тестовый заказ
+        test_order = Order(
+            rk_visit_id="TEST_" + str(template_id),
+            rk_order_ident="TEST",
+            table_code="TEST",
+            table_name="Тест",
+            waiter_code="",
+            waiter_name="",
+            status="DONE"
+        )
+        db.add(test_order)
+        db.flush()  # Получаем ID заказа
+
+        # Создаём тестовый order item
+        test_order_item = OrderItem(
+            order_id=test_order.id,
+            dish_rid=None,
+            dish_id="TEST",
+            dish_name=f"ТЕСТ: {template.name}",
+            dish_code="TEST123",
+            quantity=1,
+            price=0,
+            modifiers=[]
+        )
+        db.add(test_order_item)
+        db.flush()  # Получаем ID order item
+
         # Создаём print job
         print_job = PrintJob(
-            order_id=None,  # Нет привязки к заказу
-            order_item_id=None,
-            dish_name="TEST: " + template.name,
-            dish_code="TEST",
-            quantity=1,
+            order_id=test_order.id,
+            order_item_id=test_order_item.id,
             label_type="MAIN",
-            tspl_code=tspl_code,
+            dish_rid=None,
+            tspl_data=tspl_code,
             status="QUEUED",
         )
 

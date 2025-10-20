@@ -16,7 +16,7 @@ interface CanvasProps {
   onElementResize: (id: string, width: number, height: number) => void
 }
 
-const MM_TO_PX = 3.78 // 96 DPI = 3.78 pixels per mm
+const MM_TO_PX = 8 // Увеличенный масштаб для удобства редактирования
 
 export default function Canvas({
   width,
