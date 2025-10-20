@@ -169,11 +169,9 @@ export default function OrdersBoard() {
 
       {/* Filters */}
       <div className="bg-white shadow rounded-lg p-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Статус
-            </label>
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700">Статус</label>
             <select
               value={filter.status || ''}
               onChange={(e) =>
@@ -182,7 +180,7 @@ export default function OrdersBoard() {
                   status: e.target.value || undefined,
                 }))
               }
-              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
             >
               <option value="">Все</option>
               <option value="NOT_PRINTED">Не напечатано</option>
@@ -193,10 +191,8 @@ export default function OrdersBoard() {
             </select>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Стол
-            </label>
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700">Стол</label>
             <input
               type="text"
               value={filter.table_code || ''}
@@ -206,19 +202,17 @@ export default function OrdersBoard() {
                   table_code: e.target.value || undefined,
                 }))
               }
-              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               placeholder="Код стола"
             />
           </div>
 
-          <div className="flex items-end">
-            <button
-              onClick={() => setFilter({})}
-              className="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-            >
-              Сбросить фильтры
-            </button>
-          </div>
+          <button
+            onClick={() => setFilter({})}
+            className="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+          >
+            Сбросить фильтры
+          </button>
         </div>
       </div>
 

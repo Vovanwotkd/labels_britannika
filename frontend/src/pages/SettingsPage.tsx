@@ -25,9 +25,6 @@ export default function SettingsPage() {
   // Редактируемые настройки
   const [printerIp, setPrinterIp] = useState('')
   const [printerPort, setPrinterPort] = useState('')
-  const [labelWidth, setLabelWidth] = useState('')
-  const [labelHeight, setLabelHeight] = useState('')
-  const [labelGap, setLabelGap] = useState('')
   const [sh5Url, setSh5Url] = useState('')
   const [sh5User, setSh5User] = useState('')
   const [sh5Pass, setSh5Pass] = useState('')
@@ -51,9 +48,6 @@ export default function SettingsPage() {
       // Заполняем поля текущими значениями
       setPrinterIp(data.printer.ip)
       setPrinterPort(data.printer.port.toString())
-      setLabelWidth(data.label.width.toString())
-      setLabelHeight(data.label.height.toString())
-      setLabelGap(data.label.gap.toString())
       setSh5Url(data.storehouse.url)
       setSh5User(data.storehouse.user)
       setSh5Pass(data.storehouse.pass)
@@ -85,9 +79,6 @@ export default function SettingsPage() {
       const settings = [
         { key: 'printer_ip', value: printerIp },
         { key: 'printer_port', value: printerPort },
-        { key: 'label_width', value: labelWidth },
-        { key: 'label_height', value: labelHeight },
-        { key: 'label_gap', value: labelGap },
         { key: 'sh5_url', value: sh5Url },
         { key: 'sh5_user', value: sh5User },
         { key: 'sh5_pass', value: sh5Pass },
@@ -242,56 +233,6 @@ export default function SettingsPage() {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono"
               placeholder="9100"
             />
-          </div>
-        </div>
-
-        <div className="mt-4">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">Размер этикетки</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Ширина (мм)
-              </label>
-              <input
-                type="number"
-                value={labelWidth}
-                onChange={(e) => setLabelWidth(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                placeholder="60"
-                min="10"
-                max="200"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Высота (мм)
-              </label>
-              <input
-                type="number"
-                value={labelHeight}
-                onChange={(e) => setLabelHeight(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                placeholder="60"
-                min="10"
-                max="200"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Отступ (мм)
-              </label>
-              <input
-                type="number"
-                value={labelGap}
-                onChange={(e) => setLabelGap(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                placeholder="2"
-                min="0"
-                max="20"
-              />
-            </div>
           </div>
         </div>
 
