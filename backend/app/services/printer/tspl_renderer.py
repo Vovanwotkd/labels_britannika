@@ -25,7 +25,23 @@ class TSPLRenderer:
         Args:
             template_config: Конфигурация шаблона (из Template.config)
         """
-        self.config = template_config
+        # Если config использует новый формат с elements, создаём fallback
+        if "elements" in template_config and not template_config.get("title"):
+            # Новый формат - создаём базовый старый формат для совместимости
+            self.config = {
+                "paper_width_mm": template_config.get("paper_width_mm", 58),
+                "paper_height_mm": template_config.get("paper_height_mm", 60),
+                "paper_gap_mm": template_config.get("paper_gap_mm", 2),
+                "shelf_life_hours": 6,
+                "title": {"font": "3", "x": 10, "y": 30},
+                "weight_calories": {"font": "2", "x": 10, "y": 60},
+                "bju": {"enabled": True, "font": "2", "x": 10, "y": 80},
+                "ingredients": {"enabled": True, "font": "2", "x": 10, "y": 100},
+                "dates": {"enabled": True, "font": "1", "x": 10, "y": 160}
+            }
+        else:
+            self.config = template_config
+
         self.dpi = 203  # PC-365B = 203 dpi
         self.mm_to_dots = 8  # 203 dpi ≈ 8 dots/mm
 

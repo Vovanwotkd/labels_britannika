@@ -225,10 +225,17 @@ async def delete_template(
         raise HTTPException(status_code=404, detail="Template not found")
 
     if template.is_default:
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot delete default template"
-        )
+        # Проверяем, есть ли другие шаблоны
+        other_templates = db.query(Template).filter(Template.id != template_id).all()
+        if not other_templates:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot delete the last template"
+            )
+
+        # Назначаем первый доступный шаблон как default
+        other_templates[0].is_default = True
+        logger.info(f"🔄 Setting template '{other_templates[0].name}' as new default")
 
     db.delete(template)
     db.commit()
