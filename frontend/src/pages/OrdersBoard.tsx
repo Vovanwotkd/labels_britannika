@@ -190,7 +190,7 @@ export default function OrdersBoard() {
               </button>
 
               {isStatusDropdownOpen && (
-                <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg z-50">
+                <div className="absolute top-full left-0 mt-1 w-full bg-white border-2 border-gray-400 rounded-md shadow-xl z-50">
                   {[
                     { value: '', label: 'Все' },
                     { value: 'NOT_PRINTED', label: 'Не напечатано' },
@@ -209,8 +209,8 @@ export default function OrdersBoard() {
                         }))
                         setIsStatusDropdownOpen(false)
                       }}
-                      className={`w-full text-left px-3 py-2 hover:bg-gray-100 ${
-                        (filter.status || '') === option.value ? 'bg-primary-50 text-primary-700' : ''
+                      className={`w-full text-left px-3 py-2 text-sm border-b border-gray-200 last:border-b-0 hover:bg-gray-100 ${
+                        (filter.status || '') === option.value ? 'bg-primary-50 text-primary-700 font-medium' : 'text-gray-900'
                       }`}
                     >
                       {option.label}
