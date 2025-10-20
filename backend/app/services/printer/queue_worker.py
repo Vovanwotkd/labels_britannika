@@ -94,6 +94,33 @@ class PrintQueueWorker:
 
         logger.info("🏁 Print queue worker: цикл завершён")
 
+    def _get_printer_client(self, db: Session) -> PrinterClient:
+        """
+        Получить PrinterClient с актуальными настройками из БД
+
+        Args:
+            db: Сессия БД
+
+        Returns:
+            PrinterClient с настройками из БД или из config (fallback)
+        """
+        from app.models import Setting
+        from app.core.config import settings
+
+        # Пытаемся получить настройки из БД
+        printer_ip_setting = db.query(Setting).filter(Setting.key == "printer_ip").first()
+        printer_port_setting = db.query(Setting).filter(Setting.key == "printer_port").first()
+
+        # Используем настройки из БД или fallback на config
+        printer_ip = printer_ip_setting.value if printer_ip_setting and printer_ip_setting.value else self.printer_host
+        printer_port = int(printer_port_setting.value) if printer_port_setting and printer_port_setting.value else self.printer_port
+
+        # Если настройки изменились, логируем
+        if printer_ip != self.printer_host or printer_port != self.printer_port:
+            logger.info(f"📝 Используем настройки принтера из БД: {printer_ip}:{printer_port}")
+
+        return PrinterClient(printer_ip, printer_port)
+
     async def _process_next_job(self):
         """
         Обработать следующее задание из очереди
@@ -119,6 +146,9 @@ class PrintQueueWorker:
 
             logger.info(f"📄 Обработка job #{job.id} (order_item_id={job.order_item_id})")
 
+            # Получаем актуальные настройки принтера из БД
+            printer_client = self._get_printer_client(db)
+
             # Меняем статус на PRINTING
             job.status = "PRINTING"
             job.started_at = datetime.now()
@@ -135,7 +165,7 @@ class PrintQueueWorker:
             try:
                 # Используем asyncio.to_thread для блокирующей операции
                 success = await asyncio.to_thread(
-                    self.printer_client.send,
+                    printer_client.send,
                     job.tspl_data
                 )
 
