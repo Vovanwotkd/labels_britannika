@@ -45,7 +45,6 @@ class CurrentUserResponse(BaseModel):
     id: int
     login: str
     role: str
-    full_name: Optional[str]
 
 
 # ============================================================================
@@ -190,7 +189,6 @@ async def login(
             "id": user.id,
             "login": user.login,
             "role": user.role,
-            "full_name": user.full_name,
         }
     )
 
@@ -239,7 +237,6 @@ async def get_current_user_info(
         id=current_user.id,
         login=current_user.login,
         role=current_user.role,
-        full_name=current_user.full_name,
     )
 
 
@@ -259,7 +256,6 @@ async def check_auth(
                 "id": current_user.id,
                 "login": current_user.login,
                 "role": current_user.role,
-                "full_name": current_user.full_name,
             }
         }
     else:
