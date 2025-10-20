@@ -188,4 +188,37 @@ export const settingsApi = {
     }),
 
   getSystemInfo: () => fetchApi<SystemInfo>('/settings/system/info'),
+
+  updateSettingsBatch: (settings: Array<{ key: string; value: string }>) =>
+    fetchApi('/settings/batch', {
+      method: 'POST',
+      body: JSON.stringify(settings),
+    }),
+}
+
+// ============================================================================
+// Test Connection API
+// ============================================================================
+
+export interface TestConnectionResponse {
+  success: boolean
+  message: string
+  details?: Record<string, any>
+}
+
+export const testConnectionApi = {
+  testPrinter: () =>
+    fetchApi<TestConnectionResponse>('/test/printer', {
+      method: 'POST',
+    }),
+
+  testStorehouse: () =>
+    fetchApi<TestConnectionResponse>('/test/storehouse', {
+      method: 'POST',
+    }),
+
+  testRKeeper: () =>
+    fetchApi<TestConnectionResponse>('/test/rkeeper', {
+      method: 'POST',
+    }),
 }

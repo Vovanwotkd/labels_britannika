@@ -4,13 +4,18 @@
  */
 
 import { useState, useEffect } from 'react'
-import { settingsApi } from '../api/client'
+import { settingsApi, testConnectionApi } from '../api/client'
 import type { SystemInfo } from '../types'
 
 export default function SettingsPage() {
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+
+  // Состояния тестирования подключения
+  const [testingPrinter, setTestingPrinter] = useState(false)
+  const [testingStorehouse, setTestingStorehouse] = useState(false)
+  const [testingRKeeper, setTestingRKeeper] = useState(false)
 
   // Редактируемые настройки
   const [printerIp, setPrinterIp] = useState('')
@@ -84,6 +89,42 @@ export default function SettingsPage() {
       alert('Ошибка сохранения настроек')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const testPrinterConnection = async () => {
+    try {
+      setTestingPrinter(true)
+      const result = await testConnectionApi.testPrinter()
+      alert(result.message)
+    } catch (error: any) {
+      alert(`Ошибка: ${error.message}`)
+    } finally {
+      setTestingPrinter(false)
+    }
+  }
+
+  const testStorehouseConnection = async () => {
+    try {
+      setTestingStorehouse(true)
+      const result = await testConnectionApi.testStorehouse()
+      alert(result.message)
+    } catch (error: any) {
+      alert(`Ошибка: ${error.message}`)
+    } finally {
+      setTestingStorehouse(false)
+    }
+  }
+
+  const testRKeeperConnection = async () => {
+    try {
+      setTestingRKeeper(true)
+      const result = await testConnectionApi.testRKeeper()
+      alert(result.message)
+    } catch (error: any) {
+      alert(`Ошибка: ${error.message}`)
+    } finally {
+      setTestingRKeeper(false)
     }
   }
 
@@ -217,6 +258,16 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+
+        <div className="mt-4">
+          <button
+            onClick={testPrinterConnection}
+            disabled={testingPrinter}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {testingPrinter ? 'Проверка...' : 'Проверить связь'}
+          </button>
+        </div>
       </div>
 
       {/* StoreHouse 5 Settings (Editable) */}
@@ -265,6 +316,16 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+
+        <div className="mt-4">
+          <button
+            onClick={testStorehouseConnection}
+            disabled={testingStorehouse}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {testingStorehouse ? 'Проверка...' : 'Проверить связь'}
+          </button>
+        </div>
       </div>
 
       {/* RKeeper Settings (Editable) */}
@@ -312,6 +373,16 @@ export default function SettingsPage() {
               />
             </div>
           </div>
+        </div>
+
+        <div className="mt-4">
+          <button
+            onClick={testRKeeperConnection}
+            disabled={testingRKeeper}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {testingRKeeper ? 'Проверка...' : 'Проверить связь'}
+          </button>
         </div>
       </div>
 
