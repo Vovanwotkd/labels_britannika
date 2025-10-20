@@ -295,4 +295,9 @@ export const templatesApi = {
     fetchApi(`/templates/${id}/set-default`, {
       method: 'POST',
     }),
+
+  testPrint: (id: number) =>
+    fetchApi(`/templates/${id}/test-print`, {
+      method: 'POST',
+    }),
 }

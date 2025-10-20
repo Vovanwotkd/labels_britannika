@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add .gitignore README.md .env.example SECURITY.md export_dishes_with_extras.py.example)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nSECURITY FIX: Удалены credentials из репозитория\n\nКРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ:\nУдалён export_dishes_with_extras.py с hardcoded credentials Store House 5\n\nДобавлено:\n- SECURITY.md - инструкции по работе с credentials\n- .env.example - пример конфигурации (без реальных паролей)\n- export_dishes_with_extras.py.example - пример скрипта\n- Обновлён .gitignore для исключения export_dishes_with_extras.py\n- Обновлён README.md с инструкцией по настройке\n\nВАЖНО:\nФайлы .env и export_dishes_with_extras.py создаются ЛОКАЛЬНО\nна каждом сервере и НЕ должны попадать в репозиторий!\n\nЕсли вы клонируете проект:\n1. Прочитайте SECURITY.md\n2. Создайте .env из .env.example\n3. Создайте export_dishes_with_extras.py из .example\n4. Укажите свои credentials\n\n⚠️ СМЕНИТЬ ПАРОЛИ:\nЕсли вы уже клонировали репозиторий с credentials - смените пароль\nStore House 5, так как он был в публичном доступе!\n\n🤖 Generated with Claude Code\nhttps://claude.com/claude-code\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push origin main --force)",
+      "Bash(git push origin main)",
+      "Bash(git add backend/)",
+      "Bash(dir \"C:\\Users\\vovan\\lables\\-labels_britannika\\XML (2)\\XML\" /b)",
+      "Bash(findstr /i \"ref\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

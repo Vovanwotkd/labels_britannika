@@ -268,3 +268,73 @@ async def set_default_template(
         "message": f"Template '{template.name}' set as default",
         "template": TemplateSchema.from_orm(template)
     }
+
+
+@router.post("/{template_id}/test-print")
+async def test_print_template(
+    template_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """
+    Тестовая печать шаблона
+
+    Печатает тестовую этикетку с примером данных
+    Требует прав администратора
+    """
+    from app.models import PrintJob
+    from app.services.printer.tspl_renderer import TSPLRenderer
+
+    template = db.query(Template).filter(Template.id == template_id).first()
+
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+
+    # Тестовые данные блюда
+    test_dish_data = {
+        "name": "ТЕСТОВОЕ БЛЮДО",
+        "rk_code": "TEST123",
+        "weight_g": 250,
+        "calories": 350,
+        "protein": 15.5,
+        "fat": 12.3,
+        "carbs": 45.2,
+        "ingredients": ["Тестовый ингредиент 1", "Тестовый ингредиент 2", "Тестовый ингредиент 3"],
+        "label_type": "MAIN"
+    }
+
+    try:
+        # Генерируем TSPL команды
+        renderer = TSPLRenderer(template.config)
+        tspl_code = renderer.render(test_dish_data)
+
+        # Создаём print job
+        print_job = PrintJob(
+            order_id=None,  # Нет привязки к заказу
+            order_item_id=None,
+            dish_name="TEST: " + template.name,
+            dish_code="TEST",
+            quantity=1,
+            label_type="MAIN",
+            tspl_code=tspl_code,
+            status="QUEUED",
+        )
+
+        db.add(print_job)
+        db.commit()
+        db.refresh(print_job)
+
+        logger.info(f"🖨️  Test print job created for template: {template.name} (id={template.id})")
+
+        return {
+            "success": True,
+            "message": f"Test print queued for template '{template.name}'",
+            "print_job_id": print_job.id
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Failed to create test print job: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create test print: {str(e)}"
+        )

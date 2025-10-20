@@ -286,10 +286,29 @@ interface TemplateEditorModalProps {
 
 function TemplateEditorModal({ template, onSave, onClose }: TemplateEditorModalProps) {
   const [editedTemplate, setEditedTemplate] = useState<Template>(template)
+  const [printing, setPrinting] = useState(false)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSave(editedTemplate)
+  }
+
+  const handleTestPrint = async () => {
+    if (editedTemplate.id === 0) {
+      alert('Сначала сохраните шаблон')
+      return
+    }
+
+    try {
+      setPrinting(true)
+      await templatesApi.testPrint(editedTemplate.id)
+      alert('Тестовая этикетка отправлена на печать!')
+    } catch (err) {
+      alert('Ошибка печати: ' + (err instanceof Error ? err.message : 'Unknown error'))
+      console.error(err)
+    } finally {
+      setPrinting(false)
+    }
   }
 
   return (
@@ -453,21 +472,35 @@ function TemplateEditorModal({ template, onSave, onClose }: TemplateEditorModalP
           </form>
 
           {/* Footer */}
-          <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-            >
-              Отмена
-            </button>
-            <button
-              type="submit"
-              onClick={handleSubmit}
-              className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700"
-            >
-              Сохранить
-            </button>
+          <div className="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
+            <div>
+              {editedTemplate.id !== 0 && (
+                <button
+                  type="button"
+                  onClick={handleTestPrint}
+                  disabled={printing}
+                  className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-50"
+                >
+                  {printing ? 'Печать...' : '🖨️ Тестовая печать'}
+                </button>
+              )}
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Отмена
+              </button>
+              <button
+                type="submit"
+                onClick={handleSubmit}
+                className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700"
+              >
+                Сохранить
+              </button>
+            </div>
           </div>
         </div>
       </div>
