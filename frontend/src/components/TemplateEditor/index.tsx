@@ -189,7 +189,7 @@ export default function TemplateEditor({
     setConfig({
       ...config,
       elements: config.elements.map((el) =>
-        el.id === selectedElementId ? { ...el, ...updates } : el
+        el.id === selectedElementId ? ({ ...el, ...updates } as TemplateElement) : el
       ),
     })
   }
