@@ -132,6 +132,13 @@ export interface ApiResponse<T = any> {
   data?: T
 }
 
+export interface Template {
+  id: number
+  name: string
+  brand_id: string
+  is_default: boolean
+}
+
 export interface SystemInfo {
   app_name: string
   version: string
@@ -141,6 +148,18 @@ export interface SystemInfo {
     ip: string
     port: number
   }
+  storehouse: {
+    url: string
+    user: string
+    pass: string
+  }
+  rkeeper: {
+    url: string
+    user: string
+    pass: string
+  }
+  default_template_id: number
+  templates: Template[]
   database: {
     orders: number
     order_items: number

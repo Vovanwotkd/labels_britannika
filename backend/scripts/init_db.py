@@ -53,6 +53,7 @@ def create_default_settings():
     db = SessionLocal()
 
     settings = [
+        # Принтер
         Setting(
             key="printer_ip",
             value="192.168.1.10",
@@ -62,6 +63,22 @@ def create_default_settings():
             key="printer_port",
             value="9100",
             description="Порт принтера (TCP)"
+        ),
+        # StoreHouse 5
+        Setting(
+            key="sh5_url",
+            value="http://10.0.0.141:9797/api/sh5exec",
+            description="URL API StoreHouse 5"
+        ),
+        Setting(
+            key="sh5_user",
+            value="Admin",
+            description="Логин для StoreHouse 5"
+        ),
+        Setting(
+            key="sh5_pass",
+            value="",
+            description="Пароль для StoreHouse 5"
         ),
         Setting(
             key="sh5_sync_last",
@@ -73,6 +90,29 @@ def create_default_settings():
             value=None,
             description="Последняя ошибка синхронизации"
         ),
+        # RKeeper
+        Setting(
+            key="rkeeper_url",
+            value="http://10.0.0.141:8443/rkeeper-api",
+            description="URL API RKeeper"
+        ),
+        Setting(
+            key="rkeeper_user",
+            value="",
+            description="Логин для RKeeper"
+        ),
+        Setting(
+            key="rkeeper_pass",
+            value="",
+            description="Пароль для RKeeper"
+        ),
+        # Шаблон по умолчанию
+        Setting(
+            key="default_template_id",
+            value="1",
+            description="ID шаблона этикетки по умолчанию"
+        ),
+        # Архивация
         Setting(
             key="archive_enabled",
             value="true",

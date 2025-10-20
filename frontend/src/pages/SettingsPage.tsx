@@ -10,6 +10,18 @@ import type { SystemInfo } from '../types'
 export default function SettingsPage() {
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null)
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  // Редактируемые настройки
+  const [printerIp, setPrinterIp] = useState('')
+  const [printerPort, setPrinterPort] = useState('')
+  const [sh5Url, setSh5Url] = useState('')
+  const [sh5User, setSh5User] = useState('')
+  const [sh5Pass, setSh5Pass] = useState('')
+  const [rkUrl, setRkUrl] = useState('')
+  const [rkUser, setRkUser] = useState('')
+  const [rkPass, setRkPass] = useState('')
+  const [defaultTemplateId, setDefaultTemplateId] = useState('')
 
   useEffect(() => {
     loadSystemInfo()
@@ -20,10 +32,49 @@ export default function SettingsPage() {
       setLoading(true)
       const data = await settingsApi.getSystemInfo()
       setSystemInfo(data)
+
+      // Заполняем поля текущими значениями
+      setPrinterIp(data.printer.ip)
+      setPrinterPort(data.printer.port.toString())
+      setSh5Url(data.storehouse.url)
+      setSh5User(data.storehouse.user)
+      setSh5Pass(data.storehouse.pass)
+      setRkUrl(data.rkeeper.url)
+      setRkUser(data.rkeeper.user)
+      setRkPass(data.rkeeper.pass)
+      setDefaultTemplateId(data.default_template_id.toString())
     } catch (error) {
       console.error('Failed to load system info:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const saveSettings = async () => {
+    try {
+      setSaving(true)
+
+      const settings = [
+        { key: 'printer_ip', value: printerIp },
+        { key: 'printer_port', value: printerPort },
+        { key: 'sh5_url', value: sh5Url },
+        { key: 'sh5_user', value: sh5User },
+        { key: 'sh5_pass', value: sh5Pass },
+        { key: 'rkeeper_url', value: rkUrl },
+        { key: 'rkeeper_user', value: rkUser },
+        { key: 'rkeeper_pass', value: rkPass },
+        { key: 'default_template_id', value: defaultTemplateId },
+      ]
+
+      await settingsApi.updateSettingsBatch(settings)
+
+      alert('Настройки сохранены успешно!')
+      loadSystemInfo()
+    } catch (error) {
+      console.error('Failed to save settings:', error)
+      alert('Ошибка сохранения настроек')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -47,7 +98,7 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-gray-900">Настройки</h1>
 
-      {/* System Info */}
+      {/* System Info (Read-only) */}
       <div className="bg-white shadow rounded-lg p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">
           Информация о системе
@@ -76,25 +127,175 @@ export default function SettingsPage() {
         </dl>
       </div>
 
-      {/* Printer */}
+      {/* Printer Settings (Editable) */}
       <div className="bg-white shadow rounded-lg p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Принтер</h2>
 
-        <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <dt className="text-sm font-medium text-gray-500">IP адрес</dt>
-            <dd className="mt-1 text-sm text-gray-900 font-mono">
-              {systemInfo.printer.ip}
-            </dd>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              IP адрес
+            </label>
+            <input
+              type="text"
+              value={printerIp}
+              onChange={(e) => setPrinterIp(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono"
+              placeholder="192.168.1.10"
+            />
           </div>
 
           <div>
-            <dt className="text-sm font-medium text-gray-500">Порт</dt>
-            <dd className="mt-1 text-sm text-gray-900 font-mono">
-              {systemInfo.printer.port}
-            </dd>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Порт
+            </label>
+            <input
+              type="text"
+              value={printerPort}
+              onChange={(e) => setPrinterPort(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono"
+              placeholder="9100"
+            />
           </div>
-        </dl>
+        </div>
+      </div>
+
+      {/* StoreHouse 5 Settings (Editable) */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">StoreHouse 5</h2>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              URL API
+            </label>
+            <input
+              type="text"
+              value={sh5Url}
+              onChange={(e) => setSh5Url(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono"
+              placeholder="http://10.0.0.141:9797/api/sh5exec"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Логин
+              </label>
+              <input
+                type="text"
+                value={sh5User}
+                onChange={(e) => setSh5User(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                placeholder="Admin"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Пароль
+              </label>
+              <input
+                type="password"
+                value={sh5Pass}
+                onChange={(e) => setSh5Pass(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                placeholder="••••••••"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* RKeeper Settings (Editable) */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">RKeeper</h2>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              URL API
+            </label>
+            <input
+              type="text"
+              value={rkUrl}
+              onChange={(e) => setRkUrl(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono"
+              placeholder="http://10.0.0.141:8443/rkeeper-api"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Логин
+              </label>
+              <input
+                type="text"
+                value={rkUser}
+                onChange={(e) => setRkUser(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                placeholder="admin"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Пароль
+              </label>
+              <input
+                type="password"
+                value={rkPass}
+                onChange={(e) => setRkPass(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                placeholder="••••••••"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Template Settings (Editable) */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Шаблон по умолчанию</h2>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Шаблон
+          </label>
+          <select
+            value={defaultTemplateId}
+            onChange={(e) => setDefaultTemplateId(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
+            {systemInfo.templates.map((template) => (
+              <option key={template.id} value={template.id}>
+                {template.name} {template.brand_id !== 'default' && `(${template.brand_id})`}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Save Button */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <div className="flex space-x-4">
+          <button
+            onClick={saveSettings}
+            disabled={saving}
+            className="px-6 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {saving ? 'Сохранение...' : 'Сохранить настройки'}
+          </button>
+
+          <button
+            onClick={loadSystemInfo}
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400"
+          >
+            Отменить
+          </button>
+        </div>
       </div>
 
       {/* Database Stats */}
@@ -180,20 +381,6 @@ export default function SettingsPage() {
             </dd>
           </div>
         </dl>
-      </div>
-
-      {/* Actions */}
-      <div className="bg-white shadow rounded-lg p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Действия</h2>
-
-        <div className="flex space-x-4">
-          <button
-            onClick={loadSystemInfo}
-            className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
-          >
-            Обновить информацию
-          </button>
-        </div>
       </div>
     </div>
   )

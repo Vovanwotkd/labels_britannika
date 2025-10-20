@@ -327,11 +327,11 @@ async def get_system_info(
 
     Требует аутентификации
     """
-    from app.core.config import settings
+    from app.core.config import settings as config
     from app.services.websocket.manager import manager
 
     # Статистика БД
-    from app.models import Order, OrderItem, PrintJob
+    from app.models import Order, OrderItem, PrintJob, Template
 
     orders_count = db.query(Order).count()
     items_count = db.query(OrderItem).count()
@@ -341,15 +341,44 @@ async def get_system_info(
     jobs_done = db.query(PrintJob).filter(PrintJob.status == "DONE").count()
     jobs_failed = db.query(PrintJob).filter(PrintJob.status == "FAILED").count()
 
+    # Получаем настройки из БД
+    def get_setting_value(key: str, default: str = ""):
+        setting = db.query(Setting).filter(Setting.key == key).first()
+        return setting.value if setting and setting.value else default
+
+    # Получаем список шаблонов
+    templates = db.query(Template).all()
+    templates_list = [
+        {
+            "id": t.id,
+            "name": t.name,
+            "brand_id": t.brand_id,
+            "is_default": t.is_default
+        }
+        for t in templates
+    ]
+
     return {
-        "app_name": settings.APP_NAME,
-        "version": settings.APP_VERSION,
-        "environment": settings.ENVIRONMENT,
-        "timezone": settings.TIMEZONE,
+        "app_name": config.APP_NAME,
+        "version": config.APP_VERSION,
+        "environment": config.ENVIRONMENT,
+        "timezone": config.TIMEZONE,
         "printer": {
-            "ip": settings.PRINTER_IP,
-            "port": settings.PRINTER_PORT,
+            "ip": get_setting_value("printer_ip", config.PRINTER_IP),
+            "port": int(get_setting_value("printer_port", str(config.PRINTER_PORT))),
         },
+        "storehouse": {
+            "url": get_setting_value("sh5_url", ""),
+            "user": get_setting_value("sh5_user", ""),
+            "pass": get_setting_value("sh5_pass", ""),
+        },
+        "rkeeper": {
+            "url": get_setting_value("rkeeper_url", ""),
+            "user": get_setting_value("rkeeper_user", ""),
+            "pass": get_setting_value("rkeeper_pass", ""),
+        },
+        "default_template_id": int(get_setting_value("default_template_id", "1")),
+        "templates": templates_list,
         "database": {
             "orders": orders_count,
             "order_items": items_count,
