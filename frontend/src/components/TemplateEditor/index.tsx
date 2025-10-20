@@ -24,7 +24,7 @@ import {
 
 interface TemplateEditorProps {
   template: Template
-  onSave: (config: TemplateConfig) => void
+  onSave: (config: TemplateConfig, name: string, brandId: string) => void
   onCancel: () => void
   onTestPrint: () => void
 }
@@ -46,6 +46,8 @@ export default function TemplateEditor({
 
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null)
   const [zoom, setZoom] = useState<number>(100) // Масштаб в процентах
+  const [templateName, setTemplateName] = useState<string>(template.name)
+  const [brandId, setBrandId] = useState<string>(template.brand_id || '')
 
   const selectedElement = config.elements.find((el) => el.id === selectedElementId)
 
@@ -206,31 +208,51 @@ export default function TemplateEditor({
   }
 
   const handleSave = () => {
-    onSave(config)
+    if (!templateName.trim()) {
+      alert('Укажите название шаблона')
+      return
+    }
+    onSave(config, templateName, brandId)
   }
 
   return (
     <div className="fixed inset-0 z-50 bg-white flex flex-col">
       {/* Header */}
       <div className="flex-shrink-0 bg-white border-b px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900">
-              Редактор шаблона: {template.name}
-            </h2>
-            <p className="text-sm text-gray-500 mt-1">
-              Перетаскивайте элементы и настраивайте их свойства
-            </p>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex-1 max-w-xl">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Название шаблона *
+            </label>
+            <input
+              type="text"
+              value={templateName}
+              onChange={(e) => setTemplateName(e.target.value)}
+              className="block w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+              placeholder="Например: Britannica Pizza"
+            />
           </div>
-          <div className="flex gap-3">
-            {template.id !== 0 && (
-              <button
-                onClick={onTestPrint}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700"
-              >
-                🖨️ Тестовая печать
-              </button>
-            )}
+          <div className="flex-1 max-w-xs ml-4">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              ID бренда (опционально)
+            </label>
+            <input
+              type="text"
+              value={brandId}
+              onChange={(e) => setBrandId(e.target.value)}
+              className="block w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+              placeholder="britannica_pizza"
+            />
+          </div>
+          <div className="flex gap-3 ml-4">
+            <button
+              onClick={onTestPrint}
+              disabled={template.id === 0}
+              className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              title={template.id === 0 ? 'Сначала сохраните шаблон' : 'Тестовая печать'}
+            >
+              🖨️ Тест
+            </button>
             <button
               onClick={onCancel}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
@@ -245,6 +267,9 @@ export default function TemplateEditor({
             </button>
           </div>
         </div>
+        <p className="text-xs text-gray-500 mt-2">
+          Перетаскивайте элементы и настраивайте их свойства
+        </p>
 
         {/* Paper size settings */}
         <div className="mt-4 flex gap-4 items-end">

@@ -66,12 +66,14 @@ export default function TemplatesPage() {
     }
   }
 
-  const handleSave = async (config: TemplateConfig) => {
+  const handleSave = async (config: TemplateConfig, name: string, brandId: string) => {
     if (!selectedTemplate) return
 
     try {
       const updatedTemplate: Template = {
         ...selectedTemplate,
+        name,
+        brand_id: brandId,
         config,
       }
 
@@ -84,7 +86,7 @@ export default function TemplatesPage() {
       setIsEditorOpen(false)
       setSelectedTemplate(null)
     } catch (err) {
-      alert('Ошибка сохранения шаблона')
+      alert('Ошибка сохранения шаблона: ' + (err instanceof Error ? err.message : 'Unknown error'))
       console.error(err)
     }
   }
