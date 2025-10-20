@@ -5,64 +5,8 @@
 
 import { useState, useEffect } from 'react'
 import { templatesApi } from '../api/client'
-
-interface Template {
-  id: number
-  name: string
-  brand_id: string
-  is_default: boolean
-  config: TemplateConfig
-  created_at?: string
-  updated_at?: string
-}
-
-interface TemplateConfig {
-  paper_width_mm: number
-  paper_height_mm: number
-  paper_gap_mm: number
-  shelf_life_hours: number
-  logo?: {
-    enabled: boolean
-    path?: string
-    x: number
-    y: number
-  }
-  title?: {
-    font: string
-    x: number
-    y: number
-  }
-  weight_calories?: {
-    font: string
-    x: number
-    y: number
-  }
-  bju?: {
-    enabled: boolean
-    font: string
-    x: number
-    y: number
-  }
-  ingredients?: {
-    enabled: boolean
-    font: string
-    x: number
-    y: number
-    max_lines?: number
-  }
-  datetime_shelf?: {
-    font: string
-    x: number
-    y: number
-  }
-  barcode?: {
-    type: string
-    x: number
-    y: number
-    height: number
-    narrow_bar: number
-  }
-}
+import TemplateEditor from '../components/TemplateEditor'
+import type { Template, TemplateConfig } from '../components/TemplateEditor/types'
 
 export default function TemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([])
@@ -95,17 +39,10 @@ export default function TemplatesPage() {
       brand_id: '',
       is_default: false,
       config: {
-        paper_width_mm: 60,
+        paper_width_mm: 58,
         paper_height_mm: 60,
         paper_gap_mm: 2,
-        shelf_life_hours: 6,
-        logo: { enabled: false, x: 5, y: 5 },
-        title: { font: '3', x: 10, y: 30 },
-        weight_calories: { font: '2', x: 10, y: 60 },
-        bju: { enabled: true, font: '2', x: 10, y: 80 },
-        ingredients: { enabled: true, font: '1', x: 10, y: 100, max_lines: 3 },
-        datetime_shelf: { font: '2', x: 10, y: 140 },
-        barcode: { type: '128', x: 10, y: 170, height: 50, narrow_bar: 2 },
+        elements: [],
       },
     }
     setSelectedTemplate(newTemplate)
@@ -129,18 +66,40 @@ export default function TemplatesPage() {
     }
   }
 
-  const handleSave = async (template: Template) => {
+  const handleSave = async (config: TemplateConfig) => {
+    if (!selectedTemplate) return
+
     try {
-      if (template.id === 0) {
-        await templatesApi.create(template)
+      const updatedTemplate: Template = {
+        ...selectedTemplate,
+        config,
+      }
+
+      if (updatedTemplate.id === 0) {
+        await templatesApi.create(updatedTemplate)
       } else {
-        await templatesApi.update(template.id, template)
+        await templatesApi.update(updatedTemplate.id, updatedTemplate)
       }
       await loadTemplates()
       setIsEditorOpen(false)
       setSelectedTemplate(null)
     } catch (err) {
       alert('Ошибка сохранения шаблона')
+      console.error(err)
+    }
+  }
+
+  const handleTestPrint = async () => {
+    if (!selectedTemplate || selectedTemplate.id === 0) {
+      alert('Сначала сохраните шаблон')
+      return
+    }
+
+    try {
+      await templatesApi.testPrint(selectedTemplate.id)
+      alert('Тестовая этикетка отправлена на печать!')
+    } catch (err) {
+      alert('Ошибка печати: ' + (err instanceof Error ? err.message : 'Unknown error'))
       console.error(err)
     }
   }
@@ -229,7 +188,7 @@ export default function TemplatesPage() {
                 <div>
                   Размер: {template.config.paper_width_mm} × {template.config.paper_height_mm} мм
                 </div>
-                <div>Срок годности: {template.config.shelf_life_hours} ч</div>
+                <div>Элементов: {template.config.elements?.length || 0}</div>
               </div>
 
               <div className="flex gap-2">
@@ -262,248 +221,18 @@ export default function TemplatesPage() {
         </div>
       )}
 
-      {/* Template Editor Modal */}
+      {/* Visual Template Editor */}
       {isEditorOpen && selectedTemplate && (
-        <TemplateEditorModal
+        <TemplateEditor
           template={selectedTemplate}
           onSave={handleSave}
-          onClose={() => {
+          onCancel={() => {
             setIsEditorOpen(false)
             setSelectedTemplate(null)
           }}
+          onTestPrint={handleTestPrint}
         />
       )}
-    </div>
-  )
-}
-
-// Template Editor Modal Component
-interface TemplateEditorModalProps {
-  template: Template
-  onSave: (template: Template) => void
-  onClose: () => void
-}
-
-function TemplateEditorModal({ template, onSave, onClose }: TemplateEditorModalProps) {
-  const [editedTemplate, setEditedTemplate] = useState<Template>(template)
-  const [printing, setPrinting] = useState(false)
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSave(editedTemplate)
-  }
-
-  const handleTestPrint = async () => {
-    if (editedTemplate.id === 0) {
-      alert('Сначала сохраните шаблон')
-      return
-    }
-
-    try {
-      setPrinting(true)
-      await templatesApi.testPrint(editedTemplate.id)
-      alert('Тестовая этикетка отправлена на печать!')
-    } catch (err) {
-      alert('Ошибка печати: ' + (err instanceof Error ? err.message : 'Unknown error'))
-      console.error(err)
-    } finally {
-      setPrinting(false)
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      {/* Overlay */}
-      <div
-        className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
-        onClick={onClose}
-      />
-
-      {/* Modal */}
-      <div className="flex min-h-full items-center justify-center p-4">
-        <div className="relative bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
-          {/* Header */}
-          <div className="px-6 py-4 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">
-                {template.id === 0 ? 'Создание шаблона' : 'Редактирование шаблона'}
-              </h3>
-              <button onClick={onClose} className="text-gray-400 hover:text-gray-500">
-                <span className="text-2xl">&times;</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Body */}
-          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-4">
-            <div className="space-y-6">
-              {/* Basic Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Название шаблона *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={editedTemplate.name}
-                    onChange={(e) =>
-                      setEditedTemplate({ ...editedTemplate, name: e.target.value })
-                    }
-                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    ID бренда
-                  </label>
-                  <input
-                    type="text"
-                    value={editedTemplate.brand_id}
-                    onChange={(e) =>
-                      setEditedTemplate({ ...editedTemplate, brand_id: e.target.value })
-                    }
-                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                    placeholder="britannica_pizza"
-                  />
-                </div>
-              </div>
-
-              {/* Paper Settings */}
-              <div>
-                <h4 className="text-md font-medium text-gray-900 mb-3">Размер этикетки</h4>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Ширина (мм)
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      value={editedTemplate.config.paper_width_mm}
-                      onChange={(e) =>
-                        setEditedTemplate({
-                          ...editedTemplate,
-                          config: {
-                            ...editedTemplate.config,
-                            paper_width_mm: parseInt(e.target.value),
-                          },
-                        })
-                      }
-                      className="block w-full px-3 py-2 border border-gray-300 rounded-md"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Высота (мм)
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      value={editedTemplate.config.paper_height_mm}
-                      onChange={(e) =>
-                        setEditedTemplate({
-                          ...editedTemplate,
-                          config: {
-                            ...editedTemplate.config,
-                            paper_height_mm: parseInt(e.target.value),
-                          },
-                        })
-                      }
-                      className="block w-full px-3 py-2 border border-gray-300 rounded-md"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Отступ (мм)
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      value={editedTemplate.config.paper_gap_mm}
-                      onChange={(e) =>
-                        setEditedTemplate({
-                          ...editedTemplate,
-                          config: {
-                            ...editedTemplate.config,
-                            paper_gap_mm: parseInt(e.target.value),
-                          },
-                        })
-                      }
-                      className="block w-full px-3 py-2 border border-gray-300 rounded-md"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Shelf Life */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Срок годности (часы)
-                </label>
-                <input
-                  type="number"
-                  required
-                  value={editedTemplate.config.shelf_life_hours}
-                  onChange={(e) =>
-                    setEditedTemplate({
-                      ...editedTemplate,
-                      config: {
-                        ...editedTemplate.config,
-                        shelf_life_hours: parseInt(e.target.value),
-                      },
-                    })
-                  }
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md"
-                />
-              </div>
-
-              {/* Note */}
-              <div className="rounded-md bg-blue-50 p-4">
-                <p className="text-sm text-blue-700">
-                  Дополнительные настройки позиционирования элементов (логотип, текст, штрихкод)
-                  будут добавлены в следующих версиях
-                </p>
-              </div>
-            </div>
-          </form>
-
-          {/* Footer */}
-          <div className="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
-            <div>
-              {editedTemplate.id !== 0 && (
-                <button
-                  type="button"
-                  onClick={handleTestPrint}
-                  disabled={printing}
-                  className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-50"
-                >
-                  {printing ? 'Печать...' : '🖨️ Тестовая печать'}
-                </button>
-              )}
-            </div>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-              >
-                Отмена
-              </button>
-              <button
-                type="submit"
-                onClick={handleSubmit}
-                className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700"
-              >
-                Сохранить
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   )
 }
