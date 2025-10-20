@@ -61,9 +61,6 @@ class OrderSchema(BaseModel):
     visit_id: str
     order_ident: str
     table_code: str
-    table_name: str
-    waiter_code: Optional[str]
-    waiter_name: Optional[str]
     status: str
     created_at: datetime
     updated_at: datetime
@@ -79,7 +76,6 @@ class OrderListItemSchema(BaseModel):
     visit_id: str
     order_ident: str
     table_code: str
-    table_name: str
     status: str
     created_at: datetime
     updated_at: datetime
@@ -154,7 +150,6 @@ async def get_orders(
             visit_id=order.visit_id,
             order_ident=order.order_ident,
             table_code=order.table_code,
-            table_name=order.table_name,
             status=order.status,
             created_at=order.created_at,
             updated_at=order.updated_at,
