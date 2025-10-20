@@ -317,12 +317,9 @@ async def test_print_template(
 
         # Создаём тестовый заказ
         test_order = Order(
-            rk_visit_id="TEST_" + str(template_id),
-            rk_order_ident="TEST",
+            visit_id="TEST_" + str(template_id),
+            order_ident="TEST",
             table_code="TEST",
-            table_name="Тест",
-            waiter_code="",
-            waiter_name="",
             status="DONE"
         )
         db.add(test_order)
@@ -331,13 +328,10 @@ async def test_print_template(
         # Создаём тестовый order item
         test_order_item = OrderItem(
             order_id=test_order.id,
-            dish_rid=None,
-            dish_id="TEST",
+            rk_code="TEST123",
             dish_name=f"ТЕСТ: {template.name}",
-            dish_code="TEST123",
             quantity=1,
-            price=0,
-            modifiers=[]
+            weight_g=250
         )
         db.add(test_order_item)
         db.flush()  # Получаем ID order item

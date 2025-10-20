@@ -225,42 +225,45 @@ export default function PropertiesPanel({
 
       {/* BJU specific */}
       {element.type === 'bju' && (
-        <div className="space-y-2">
-          <label className="flex items-center text-sm">
+        <div className="space-y-3">
+          <div className="text-sm font-medium text-gray-700 mb-2">
+            Отображаемые элементы:
+          </div>
+          <label className="flex items-center text-sm cursor-pointer">
             <input
               type="checkbox"
               checked={element.showProteins}
               onChange={(e) => onUpdate({ showProteins: e.target.checked })}
-              className="mr-2"
+              className="mr-3 w-4 h-4"
             />
-            Показывать белки
+            <span className="text-gray-700">Белки</span>
           </label>
-          <label className="flex items-center text-sm">
+          <label className="flex items-center text-sm cursor-pointer">
             <input
               type="checkbox"
               checked={element.showFats}
               onChange={(e) => onUpdate({ showFats: e.target.checked })}
-              className="mr-2"
+              className="mr-3 w-4 h-4"
             />
-            Показывать жиры
+            <span className="text-gray-700">Жиры</span>
           </label>
-          <label className="flex items-center text-sm">
+          <label className="flex items-center text-sm cursor-pointer">
             <input
               type="checkbox"
               checked={element.showCarbs}
               onChange={(e) => onUpdate({ showCarbs: e.target.checked })}
-              className="mr-2"
+              className="mr-3 w-4 h-4"
             />
-            Показывать углеводы
+            <span className="text-gray-700">Углеводы</span>
           </label>
-          <label className="flex items-center text-sm">
+          <label className="flex items-center text-sm cursor-pointer">
             <input
               type="checkbox"
               checked={element.showCalories}
               onChange={(e) => onUpdate({ showCalories: e.target.checked })}
-              className="mr-2"
+              className="mr-3 w-4 h-4"
             />
-            Показывать калории
+            <span className="text-gray-700">Калории</span>
           </label>
         </div>
       )}

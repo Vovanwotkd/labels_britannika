@@ -45,6 +45,7 @@ export default function TemplateEditor({
   )
 
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null)
+  const [zoom, setZoom] = useState<number>(100) // Масштаб в процентах
 
   const selectedElement = config.elements.find((el) => el.id === selectedElementId)
 
@@ -295,6 +296,32 @@ export default function TemplateEditor({
               className="block w-20 px-2 py-1 text-sm border border-gray-300 rounded"
             />
           </div>
+          <div className="ml-auto flex items-center gap-2">
+            <label className="block text-xs font-medium text-gray-700">
+              Масштаб:
+            </label>
+            <button
+              onClick={() => setZoom(Math.max(50, zoom - 25))}
+              className="px-2 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50"
+            >
+              -
+            </button>
+            <span className="text-sm font-medium text-gray-700 min-w-[50px] text-center">
+              {zoom}%
+            </span>
+            <button
+              onClick={() => setZoom(Math.min(200, zoom + 25))}
+              className="px-2 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50"
+            >
+              +
+            </button>
+            <button
+              onClick={() => setZoom(100)}
+              className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50"
+            >
+              100%
+            </button>
+          </div>
         </div>
       </div>
 
@@ -307,15 +334,17 @@ export default function TemplateEditor({
 
         {/* Canvas area */}
         <div className="flex-1 bg-gray-100 p-8 overflow-auto flex items-center justify-center">
-          <Canvas
-            width={config.paper_width_mm}
-            height={config.paper_height_mm}
-            elements={config.elements}
-            selectedElementId={selectedElementId}
-            onElementSelect={setSelectedElementId}
-            onElementMove={handleElementMove}
-            onElementResize={handleElementResize}
-          />
+          <div style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'center' }}>
+            <Canvas
+              width={config.paper_width_mm}
+              height={config.paper_height_mm}
+              elements={config.elements}
+              selectedElementId={selectedElementId}
+              onElementSelect={setSelectedElementId}
+              onElementMove={handleElementMove}
+              onElementResize={handleElementResize}
+            />
+          </div>
         </div>
 
         {/* Right sidebar - Properties */}
