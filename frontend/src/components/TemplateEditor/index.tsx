@@ -218,33 +218,27 @@ export default function TemplateEditor({
   return (
     <div className="fixed inset-0 z-50 bg-white flex flex-col">
       {/* Header */}
-      <div className="flex-shrink-0 bg-white border-b px-6 py-4">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex-1 max-w-xl">
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              Название шаблона *
-            </label>
+      <div className="flex-shrink-0 bg-gradient-to-r from-primary-50 to-white border-b px-6 py-3">
+        <div className="flex items-center gap-4">
+          <div className="flex-1">
             <input
               type="text"
               value={templateName}
               onChange={(e) => setTemplateName(e.target.value)}
-              className="block w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-              placeholder="Например: Britannica Pizza"
+              className="block w-full px-3 py-2 text-base font-semibold border-2 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              placeholder="Название шаблона *"
             />
           </div>
-          <div className="flex-1 max-w-xs ml-4">
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              ID бренда (опционально)
-            </label>
+          <div className="w-64">
             <input
               type="text"
               value={brandId}
               onChange={(e) => setBrandId(e.target.value)}
               className="block w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-              placeholder="britannica_pizza"
+              placeholder="ID бренда"
             />
           </div>
-          <div className="flex gap-3 ml-4">
+          <div className="flex gap-2">
             <button
               onClick={onTestPrint}
               disabled={template.id === 0}
@@ -267,9 +261,6 @@ export default function TemplateEditor({
             </button>
           </div>
         </div>
-        <p className="text-xs text-gray-500 mt-2">
-          Перетаскивайте элементы и настраивайте их свойства
-        </p>
 
         {/* Paper size settings */}
         <div className="mt-4 flex gap-4 items-end">
