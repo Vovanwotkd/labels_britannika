@@ -1,6 +1,6 @@
 """
 RKeeper XML Parser
-Парсер XML webhook от RKeeper
+Парсер XML webhook от RKeeper (новый формат событий)
 """
 
 import logging
@@ -13,38 +13,36 @@ logger = logging.getLogger(__name__)
 
 class RKeeperXMLParser:
     """
-    Парсер XML webhook от RKeeper
+    Парсер XML webhook от RKeeper (новый формат)
 
-    Формат webhook:
+    RKeeper отправляет события в формате:
     ```xml
-    <RK7Query>
-        <a name="Save Order">
-            <Order visit="123456" orderIdent="7890">
-                <Table code="101" name="Стол 1"/>
-                <Waiter code="5" name="Иван"/>
-                <Session>
-                    <Dish id="2538" code="2538" name="Борщ" uni="1" quantity="1000" price="45000"/>
-                    <Dish id="2539" code="2539" name="Котлета" uni="2" quantity="2000" price="35000">
-                        <Modi id="123" name="С гарниром"/>
-                    </Dish>
-                </Session>
-                <ChangeLog>
-                    <Dish id="2538" uni="1" oldvalue="0" newvalue="1000" price="45000"/>
-                    <Dish id="2539" uni="2" oldvalue="0" newvalue="2000" price="35000"/>
-                    <Modi id="123"/>
-                </ChangeLog>
-            </Order>
-        </a>
-    </RK7Query>
+    <a name="Order Changed" DateTime="..." Situation="3" ...>
+        <Order visit="617707056" orderIdent="256" ...>
+            <Table id="1011163" code="5" name="5"/>
+            <Waiter id="1000634" code="7764" name="Ассар"/>
+            <Session uni="101" ...>
+                <Dish id="1004496" code="2714" name="..." uni="4" quantity="1000" price="29800"/>
+            </Session>
+        </Order>
+        <ChangeLog>
+            <Dish id="1004496" code="2714" uni="4" oldvalue="0" newvalue="1000" new="1"/>
+        </ChangeLog>
+    </a>
     ```
 
-    Параметры:
-    - visit: ID визита (заказа в RKeeper)
-    - orderIdent: Идентификатор заказа
-    - code: Код блюда в RKeeper
-    - quantity: Количество в граммах (1000 = 1 порция)
-    - price: Цена в копейках (45000 = 450 руб)
-    - uni: Уникальный номер позиции в заказе
+    События (name):
+    - "New Order" - создание нового заказа
+    - "Open Order" - открытие существующего заказа
+    - "Order Changed" - изменение заказа (добавление/удаление блюд)
+    - "Save Order" - сохранение заказа (закрытие сессии)
+    - "Quit Order" - выход из заказа/закрытие
+    - "Order recalc" - пересчет заказа
+
+    ChangeLog содержит изменения:
+    - oldvalue="0" newvalue="1000" new="1" - добавлено блюдо
+    - oldvalue="1000" newvalue="0" - удалено блюдо
+    - oldvalue="1000" newvalue="2000" - изменено количество
     """
 
     def parse(self, xml_data: str) -> Optional[Dict]:
@@ -56,27 +54,30 @@ class RKeeperXMLParser:
 
         Returns:
             {
-                "action": str,  # "Save Order", "Print Receipt", etc.
+                "event_type": str,  # "New Order", "Order Changed", "Save Order", "Quit Order"
                 "visit_id": str,
                 "order_ident": str,
                 "table_code": str,
                 "table_name": str,
                 "waiter_code": Optional[str],
                 "waiter_name": Optional[str],
-                "items": [
+                "order_sum": float,  # Общая сумма заказа
+                "paid": bool,  # Оплачен ли заказ
+                "finished": bool,  # Завершен ли заказ
+                "changes": [  # Изменения из ChangeLog
                     {
-                        "rk_code": str,  # Код блюда в RKeeper
-                        "rk_id": str,    # ID блюда в RKeeper
+                        "rk_code": str,
+                        "rk_id": str,
                         "name": str,
-                        "uni": int,      # Уникальный номер позиции
-                        "quantity": int,  # Количество порций
-                        "price": float,  # Цена в рублях
-                        "modifier_id": Optional[str],
-                        "modifier_name": Optional[str],
+                        "uni": int,
+                        "old_quantity": int,  # Старое количество порций
+                        "new_quantity": int,  # Новое количество порций
+                        "delta": int,  # Изменение (+1, -1, +2 и т.д.)
+                        "price": float,
+                        "is_new": bool,  # True если блюдо только добавлено
+                        "is_deleted": bool,  # True если блюдо удалено
                     }
-                ],
-                "prepay": Optional[float],  # Предоплата в рублях
-                "discount": Optional[float],  # Скидка в рублях
+                ]
             }
             или None при ошибке
         """
@@ -84,58 +85,63 @@ class RKeeperXMLParser:
             # Парсим XML
             root = ET.fromstring(xml_data)
 
-            # Получаем action
-            action_elem = root.find('.//a')
-            if action_elem is None:
-                logger.error("Элемент <a> не найден в XML")
+            # Получаем тип события
+            event_type = root.get('name', '')
+            if not event_type:
+                logger.error("Атрибут 'name' не найден в корневом элементе")
                 return None
 
-            action = action_elem.get('name', '')
+            logger.info(f"📨 RKeeper event: {event_type}")
 
             # Получаем Order
-            order_elem = action_elem.find('Order')
+            order_elem = root.find('Order')
             if order_elem is None:
-                logger.error("Элемент <Order> не найден в XML")
+                logger.warning(f"⚠️ Элемент <Order> не найден для события '{event_type}'")
+                # Некоторые события могут не содержать Order (например чисто служебные)
                 return None
 
             visit_id = order_elem.get('visit', '')
             order_ident = order_elem.get('orderIdent', '')
+            order_sum_kopeks = int(order_elem.get('orderSum', 0))
+            order_sum = order_sum_kopeks / 100.0
+            paid = order_elem.get('paid', '0') == '1'
+            finished = order_elem.get('finished', '0') == '1'
+
+            if not visit_id or not order_ident:
+                logger.error("visit_id или order_ident отсутствуют")
+                return None
 
             # Получаем Table
             table_elem = order_elem.find('Table')
             table_code = table_elem.get('code', '') if table_elem is not None else ''
-            table_name = table_elem.get('name', '') if table_elem is not None else ''
+            table_name = table_elem.get('name', table_code) if table_elem is not None else ''
 
             # Получаем Waiter (опционально)
             waiter_elem = order_elem.find('Waiter')
             waiter_code = waiter_elem.get('code') if waiter_elem is not None else None
             waiter_name = waiter_elem.get('name') if waiter_elem is not None else None
 
-            # Парсим items из Session
-            items = self._parse_items(order_elem)
-
-            # Парсим Prepay (предоплата)
-            prepay = self._parse_prepay(action_elem)
-
-            # Парсим Discount (скидка)
-            discount = self._parse_discount(order_elem)
+            # Парсим изменения из ChangeLog
+            changes = self._parse_changelog(root, order_elem)
 
             result = {
-                "action": action,
+                "event_type": event_type,
                 "visit_id": visit_id,
                 "order_ident": order_ident,
                 "table_code": table_code,
                 "table_name": table_name,
                 "waiter_code": waiter_code,
                 "waiter_name": waiter_name,
-                "items": items,
-                "prepay": prepay,
-                "discount": discount,
+                "order_sum": order_sum,
+                "paid": paid,
+                "finished": finished,
+                "changes": changes,
             }
 
             logger.info(
-                f"✅ Parsed RKeeper XML: action={action}, visit={visit_id}, "
-                f"order={order_ident}, table={table_code}, items={len(items)}"
+                f"✅ Parsed: event={event_type}, visit={visit_id}, order={order_ident}, "
+                f"table={table_code}, changes={len(changes)}, sum={order_sum:.2f}₽, "
+                f"paid={paid}, finished={finished}"
             )
 
             return result
@@ -147,93 +153,97 @@ class RKeeperXMLParser:
             logger.error(f"❌ Unexpected error parsing RKeeper XML: {e}", exc_info=True)
             return None
 
-    def _parse_items(self, order_elem: ET.Element) -> List[Dict]:
+    def _parse_changelog(self, root: ET.Element, order_elem: ET.Element) -> List[Dict]:
         """
-        Парсить items из Session
+        Парсить изменения из ChangeLog
 
         Args:
+            root: Корневой элемент <a>
             order_elem: Элемент <Order>
 
         Returns:
-            Список items
+            Список изменений блюд
         """
-        items = []
+        changes = []
 
-        # Ищем все Session элементы
-        sessions = order_elem.findall('.//Session')
+        # Ищем ChangeLog
+        changelog_elem = root.find('ChangeLog')
+        if changelog_elem is None:
+            # Нет изменений
+            return changes
 
-        for session in sessions:
-            # Ищем все Dish элементы
-            dishes = session.findall('Dish')
+        # Парсим все Dish элементы в ChangeLog
+        for dish_change in changelog_elem.findall('Dish'):
+            rk_id = dish_change.get('id', '')
+            rk_code = dish_change.get('code', rk_id)
+            name = dish_change.get('name', '')
+            uni = int(dish_change.get('uni', 0))
 
-            for dish in dishes:
-                rk_id = dish.get('id', '')
-                rk_code = dish.get('code', rk_id)  # code может отсутствовать, используем id
-                name = dish.get('name', '')
-                uni = int(dish.get('uni', 0))
-                quantity_g = int(dish.get('quantity', 0))  # В граммах (1000 = 1 порция)
-                price_kopeks = int(dish.get('price', 0))  # В копейках
+            # Старое и новое значение (в граммах)
+            old_value_g = int(dish_change.get('oldvalue', 0))
+            new_value_g = int(dish_change.get('newvalue', 0))
 
-                # Количество порций (1000г = 1 порция)
-                quantity = quantity_g // 1000
+            # Количество порций (1000г = 1 порция)
+            old_quantity = old_value_g // 1000
+            new_quantity = new_value_g // 1000
+            delta = new_quantity - old_quantity
 
-                # Цена в рублях
-                price = price_kopeks / 100.0
+            # Цена в рублях
+            price_kopeks = int(dish_change.get('price', 0))
+            price = price_kopeks / 100.0
 
-                # Модификатор (опционально)
-                modifier_elem = dish.find('Modi')
-                modifier_id = modifier_elem.get('id') if modifier_elem is not None else None
-                modifier_name = modifier_elem.get('name') if modifier_elem is not None else None
+            # Флаги
+            is_new = dish_change.get('new') == '1'
+            is_deleted = (new_value_g == 0 and old_value_g > 0)
 
-                items.append({
-                    "rk_code": rk_code,
-                    "rk_id": rk_id,
-                    "name": name,
-                    "uni": uni,
-                    "quantity": quantity,
-                    "price": price,
-                    "modifier_id": modifier_id,
-                    "modifier_name": modifier_name,
-                })
+            # Если нет имени в ChangeLog, ищем в Order/Session
+            if not name:
+                name = self._find_dish_name(order_elem, uni)
 
-        return items
+            change = {
+                "rk_code": rk_code,
+                "rk_id": rk_id,
+                "name": name,
+                "uni": uni,
+                "old_quantity": old_quantity,
+                "new_quantity": new_quantity,
+                "delta": delta,
+                "price": price,
+                "is_new": is_new,
+                "is_deleted": is_deleted,
+            }
 
-    def _parse_prepay(self, action_elem: ET.Element) -> Optional[float]:
+            changes.append(change)
+
+            # Логируем для отладки
+            action_str = "➕ ADD" if is_new else ("➖ DELETE" if is_deleted else "🔄 CHANGE")
+            logger.debug(
+                f"{action_str} dish: uni={uni}, code={rk_code}, "
+                f"qty: {old_quantity}→{new_quantity} (Δ{delta:+d}), "
+                f"price={price:.2f}₽"
+            )
+
+        return changes
+
+    def _find_dish_name(self, order_elem: ET.Element, uni: int) -> str:
         """
-        Парсить Prepay (предоплату)
-
-        Args:
-            action_elem: Элемент <a>
-
-        Returns:
-            Предоплата в рублях или None
-        """
-        prepay_elem = action_elem.find('.//ChangeLog/Prepay')
-
-        if prepay_elem is not None:
-            amount_kopeks = int(prepay_elem.get('amount', 0))
-            return amount_kopeks / 100.0
-
-        return None
-
-    def _parse_discount(self, order_elem: ET.Element) -> Optional[float]:
-        """
-        Парсить Discount (скидку)
+        Найти название блюда по uni в Order/Session
 
         Args:
             order_elem: Элемент <Order>
+            uni: Уникальный номер позиции
 
         Returns:
-            Скидка в рублях или None
+            Название блюда или пустая строка
         """
-        # Скидка может быть в Session/Discount
-        discount_elem = order_elem.find('.//Session/Discount')
+        # Ищем все Session/Dish с данным uni
+        for session in order_elem.findall('.//Session'):
+            for dish in session.findall('Dish'):
+                dish_uni = int(dish.get('uni', 0))
+                if dish_uni == uni:
+                    return dish.get('name', '')
 
-        if discount_elem is not None:
-            amount_kopeks = int(discount_elem.get('amount', 0))
-            return abs(amount_kopeks) / 100.0  # Модуль, т.к. может быть отрицательной
-
-        return None
+        return ''
 
 
 # ============================================================================
