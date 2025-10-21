@@ -77,11 +77,10 @@ services:
       - backend
     command: >
       sh -c "
-        touch /app/dishes_with_extras.sqlite &&
         while true; do
-          echo '[$(date)] Starting dishes sync...'
+          echo \"[\$(date)] Starting dishes sync...\"
           python export_dishes_with_extras.py || echo 'Sync failed'
-          echo '[$(date)] Sync completed. Next run in 24 hours.'
+          echo \"[\$(date)] Sync completed. Next run in 24 hours.\"
           sleep 86400
         done
       "
