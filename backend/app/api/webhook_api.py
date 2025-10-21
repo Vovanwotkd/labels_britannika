@@ -52,7 +52,20 @@ async def rkeeper_webhook(
         xml_data = body.decode('utf-8')
 
         logger.info(f"📨 Received RKeeper webhook ({len(xml_data)} bytes)")
-        logger.debug(f"XML data:\n{xml_data}")
+        logger.info(f"📄 Raw XML:\n{xml_data}")
+
+        # Дополнительно логируем в файл для удобства отладки
+        import os
+        from datetime import datetime
+        log_dir = "/app/data/rkeeper_logs"
+        os.makedirs(log_dir, exist_ok=True)
+        log_file = f"{log_dir}/webhook_{datetime.now().strftime('%Y%m%d')}.log"
+        with open(log_file, "a", encoding="utf-8") as f:
+            f.write(f"\n{'='*80}\n")
+            f.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] RKeeper Webhook\n")
+            f.write(f"{'='*80}\n")
+            f.write(xml_data)
+            f.write(f"\n{'='*80}\n\n")
 
         # Парсим XML
         parsed_data = parse_rkeeper_xml(xml_data)
