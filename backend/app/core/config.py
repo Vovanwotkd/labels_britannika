@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     # БАЗА ДАННЫХ
     # ========================================================================
     DATABASE_URL: str = "sqlite:///./britannica.sqlite"
-    DISHES_DB_PATH: str = "../dishes_with_extras.sqlite"  # Мастер-база блюд
+    DISHES_DB_PATH: str = "./dishes_with_extras.sqlite"  # Мастер-база блюд
 
     # ========================================================================
     # STORE HOUSE 5 (API для загрузки блюд)
