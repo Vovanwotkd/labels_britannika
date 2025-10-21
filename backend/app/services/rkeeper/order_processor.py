@@ -110,6 +110,12 @@ class OrderProcessor:
                 order.closed_at = datetime.now()
                 logger.info(f"✅ Order {order.id} closed (paid and finished)")
 
+            # Отменяем заказ если все блюда удалены (Quit Order с пустым заказом)
+            elif event_type == "Quit Order" and order_sum == 0:
+                order.status = "CANCELLED"
+                order.closed_at = datetime.now()
+                logger.info(f"🚫 Order {order.id} cancelled (Quit Order with empty order)")
+
             # Сохраняем всё
             self.db.commit()
 
