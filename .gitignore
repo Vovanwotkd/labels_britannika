@@ -124,9 +124,6 @@ dmypy.json
 westpower.fiji/
 XML (2)/
 
-# Скрипты с учётными данными (credentials)
-export_dishes_with_extras.py
-
 # Системные файлы Windows
 *.lnk
 $RECYCLE.BIN/

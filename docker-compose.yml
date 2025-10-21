@@ -39,7 +39,7 @@ services:
       - ./backend/data:/app/data
 
       # dishes_with_extras.sqlite (обновляется sync сервисом)
-      - ./backend/dishes_with_extras.sqlite:/app/dishes_with_extras.sqlite:ro
+      - ./dishes_with_extras.sqlite:/app/dishes_with_extras.sqlite:ro
 
     networks:
       - britannica-network
@@ -69,18 +69,21 @@ services:
       # Доступ к БД backend для чтения настроек
       - ./backend/data:/app/data:ro
       # SQLite для экспорта товаров (read-write)
-      - ./backend/dishes_with_extras.sqlite:/app/dishes_with_extras.sqlite
+      - ./dishes_with_extras.sqlite:/app/dishes_with_extras.sqlite
     networks:
       - britannica-network
     depends_on:
       - backend
     command: >
-      sh -c "while true; do
-        echo '[$(date)] Starting dishes sync...'
-        python export_dishes_with_extras.py || echo 'Sync failed'
-        echo '[$(date)] Sync completed. Next run in 24 hours.'
-        sleep 86400
-      done"
+      sh -c "
+        touch /app/dishes_with_extras.sqlite &&
+        while true; do
+          echo '[$(date)] Starting dishes sync...'
+          python export_dishes_with_extras.py || echo 'Sync failed'
+          echo '[$(date)] Sync completed. Next run in 24 hours.'
+          sleep 86400
+        done
+      "
     logging:
       driver: "json-file"
       options:
