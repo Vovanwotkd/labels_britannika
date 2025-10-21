@@ -12,6 +12,7 @@ services:
       - APP_NAME=Britannica Labels
       - APP_VERSION=0.1.0
       - ENVIRONMENT=production
+      - LOG_LEVEL=DEBUG
 
       # База данных
       - DATABASE_URL=sqlite:///./data/britannica_labels.db
