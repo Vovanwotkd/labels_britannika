@@ -78,9 +78,6 @@ class OrderProcessor:
                 visit_id=visit_id,
                 order_ident=order_ident,
                 table_code=table_code,
-                table_name=parsed_data.get("table_name", ""),
-                waiter_code=parsed_data.get("waiter_code"),
-                waiter_name=parsed_data.get("waiter_name"),
             )
 
             # Обрабатываем items
@@ -159,9 +156,6 @@ class OrderProcessor:
         visit_id: str,
         order_ident: str,
         table_code: str,
-        table_name: str,
-        waiter_code: Optional[str],
-        waiter_name: Optional[str],
     ) -> Order:
         """
         Получить существующий заказ или создать новый
@@ -170,9 +164,6 @@ class OrderProcessor:
             visit_id: ID визита
             order_ident: Идентификатор заказа
             table_code: Код стола
-            table_name: Название стола
-            waiter_code: Код официанта
-            waiter_name: Имя официанта
 
         Returns:
             Order объект
@@ -186,9 +177,6 @@ class OrderProcessor:
         if order:
             # Обновляем данные заказа (на случай изменений)
             order.table_code = table_code
-            order.table_name = table_name
-            order.waiter_code = waiter_code
-            order.waiter_name = waiter_name
             order.updated_at = datetime.now()
 
             logger.debug(f"📝 Updated existing order #{order.id}")
@@ -198,9 +186,6 @@ class OrderProcessor:
                 visit_id=visit_id,
                 order_ident=order_ident,
                 table_code=table_code,
-                table_name=table_name,
-                waiter_code=waiter_code,
-                waiter_name=waiter_name,
                 status="NOT_PRINTED",  # Изначально не напечатано
             )
             self.db.add(order)
