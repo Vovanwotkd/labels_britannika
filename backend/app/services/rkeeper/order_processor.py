@@ -40,6 +40,16 @@ class OrderProcessor:
 
         Args:
             parsed_data: Parsed данные от RKeeperXMLParser
+            {
+                "event_type": str,  # "New Order", "Order Changed", "Save Order", "Quit Order"
+                "visit_id": str,
+                "order_ident": str,
+                "table_code": str,
+                "order_sum": float,
+                "paid": bool,
+                "finished": bool,
+                "changes": [...]  # Изменения блюд
+            }
 
         Returns:
             {
@@ -51,15 +61,19 @@ class OrderProcessor:
             }
         """
         try:
-            action = parsed_data["action"]
+            event_type = parsed_data["event_type"]
             visit_id = parsed_data["visit_id"]
             order_ident = parsed_data["order_ident"]
             table_code = parsed_data["table_code"]
-            items_data = parsed_data["items"]
+            order_sum = parsed_data["order_sum"]
+            paid = parsed_data["paid"]
+            finished = parsed_data["finished"]
+            changes = parsed_data["changes"]
 
             logger.info(
-                f"🔄 Processing RKeeper order: action={action}, "
-                f"visit={visit_id}, order={order_ident}, table={table_code}"
+                f"🔄 Processing RKeeper event: {event_type}, "
+                f"visit={visit_id}, order={order_ident}, table={table_code}, "
+                f"sum={order_sum:.2f}₽, paid={paid}, finished={finished}"
             )
 
             # Проверяем фильтр столов (если настроен)
@@ -78,36 +92,43 @@ class OrderProcessor:
                 visit_id=visit_id,
                 order_ident=order_ident,
                 table_code=table_code,
+                order_sum=order_sum,
             )
 
-            # Обрабатываем items
+            # Обрабатываем изменения
             items_processed = 0
             jobs_created = 0
 
-            for item_data in items_data:
-                result = self._process_item(order, item_data)
+            for change in changes:
+                result = self._process_change(order, change)
                 items_processed += 1
                 jobs_created += result["jobs_created"]
+
+            # Закрываем заказ если оплачен и завершен
+            if paid and finished:
+                order.status = "DONE"
+                order.closed_at = datetime.now()
+                logger.info(f"✅ Order {order.id} closed (paid and finished)")
 
             # Сохраняем всё
             self.db.commit()
 
             logger.info(
-                f"✅ Order processed: order_id={order.id}, "
-                f"items={items_processed}, jobs={jobs_created}"
+                f"✅ Event processed: order_id={order.id}, "
+                f"changes={items_processed}, jobs={jobs_created}"
             )
 
             return {
                 "success": True,
                 "order_id": order.id,
-                "message": "Order processed successfully",
+                "message": f"{event_type} processed successfully",
                 "items_processed": items_processed,
                 "jobs_created": jobs_created,
             }
 
         except Exception as e:
             self.db.rollback()
-            logger.error(f"❌ Error processing order: {e}", exc_info=True)
+            logger.error(f"❌ Error processing event: {e}", exc_info=True)
             return {
                 "success": False,
                 "order_id": None,
@@ -156,6 +177,7 @@ class OrderProcessor:
         visit_id: str,
         order_ident: str,
         table_code: str,
+        order_sum: float,
     ) -> Order:
         """
         Получить существующий заказ или создать новый
@@ -164,6 +186,7 @@ class OrderProcessor:
             visit_id: ID визита
             order_ident: Идентификатор заказа
             table_code: Код стола
+            order_sum: Сумма заказа
 
         Returns:
             Order объект
@@ -177,6 +200,7 @@ class OrderProcessor:
         if order:
             # Обновляем данные заказа (на случай изменений)
             order.table_code = table_code
+            order.order_total = order_sum
             order.updated_at = datetime.now()
 
             logger.debug(f"📝 Updated existing order #{order.id}")
@@ -186,6 +210,7 @@ class OrderProcessor:
                 visit_id=visit_id,
                 order_ident=order_ident,
                 table_code=table_code,
+                order_total=order_sum,
                 status="NOT_PRINTED",  # Изначально не напечатано
             )
             self.db.add(order)
@@ -195,37 +220,51 @@ class OrderProcessor:
 
         return order
 
-    def _process_item(self, order: Order, item_data: Dict) -> Dict:
+    def _process_change(self, order: Order, change: Dict) -> Dict:
         """
-        Обработать item (блюдо) заказа
+        Обработать изменение блюда в заказе
 
         Args:
             order: Order объект
-            item_data: Данные item от parser
+            change: Данные изменения от parser
+            {
+                "rk_code": str,
+                "rk_id": str,
+                "name": str,
+                "uni": int,
+                "old_quantity": int,
+                "new_quantity": int,
+                "delta": int,
+                "price": float,
+                "is_new": bool,
+                "is_deleted": bool,
+            }
 
         Returns:
             {
                 "jobs_created": int
             }
         """
-        rk_code = item_data["rk_code"]
-        uni = item_data["uni"]
-        quantity = item_data["quantity"]
+        rk_code = change["rk_code"]
+        uni = change["uni"]
+        new_quantity = change["new_quantity"]
+        delta = change["delta"]
+        is_new = change["is_new"]
+        is_deleted = change["is_deleted"]
 
-        logger.debug(f"  📦 Processing item: rk_code={rk_code}, uni={uni}, qty={quantity}")
-
-        # Пропускаем если quantity = 0 (удалено из заказа)
-        if quantity <= 0:
-            logger.debug(f"  ⏭️  Item {rk_code} has quantity=0, skipping")
-            return {"jobs_created": 0}
+        logger.debug(
+            f"  📦 Processing change: rk_code={rk_code}, uni={uni}, "
+            f"qty: {change['old_quantity']}→{new_quantity} (Δ{delta:+d}), "
+            f"new={is_new}, deleted={is_deleted}"
+        )
 
         # Получаем данные блюда из dishes_with_extras.sqlite
         dish = dishes_db.get_dish_by_rk_code(rk_code)
         if not dish:
             logger.warning(f"  ⚠️  Dish {rk_code} not found in database")
-            # Создаём item с базовыми данными из RKeeper
+            # Создаём dish с базовыми данными из RKeeper
             dish = {
-                "name": item_data["name"],
+                "name": change["name"],
                 "rkeeper_code": rk_code,
                 "weight_g": 0,
                 "calories": 0,
@@ -237,47 +276,63 @@ class OrderProcessor:
                 "extra_labels": [],
             }
 
-        # Ищем существующий OrderItem или создаём новый
+        # Ищем существующий OrderItem с таким uni
         order_item = self.db.query(OrderItem).filter(
             OrderItem.order_id == order.id,
-            OrderItem.uni == uni,
+            OrderItem.rk_code == rk_code,
         ).first()
 
-        if order_item:
-            # Обновляем существующий
-            order_item.quantity = quantity
-            order_item.updated_at = datetime.now()
+        jobs_created = 0
 
-            logger.debug(f"  📝 Updated order_item #{order_item.id}")
+        if is_deleted or new_quantity == 0:
+            # Блюдо удалено из заказа
+            if order_item:
+                logger.debug(f"  ➖ Deleting order_item #{order_item.id}")
+                self.db.delete(order_item)
+            else:
+                logger.debug(f"  ⏭️  Item already deleted, skipping")
+            return {"jobs_created": 0}
+
+        if order_item:
+            # Обновляем существующий OrderItem
+            old_qty = order_item.quantity
+            order_item.quantity = new_quantity
+            order_item.dish_name = change["name"]
+
+            logger.debug(f"  📝 Updated order_item #{order_item.id}: {old_qty}→{new_quantity}")
+
+            # Печатаем только НОВЫЕ порции (delta)
+            if delta > 0:
+                logger.debug(f"  🖨️  Printing {delta} new portions")
+                jobs_created = self._create_print_jobs_for_delta(order_item, dish, delta)
         else:
-            # Создаём новый
+            # Создаём новый OrderItem
             order_item = OrderItem(
                 order_id=order.id,
                 rk_code=rk_code,
-                name=item_data["name"],
-                uni=uni,
-                quantity=quantity,
-                price=item_data["price"],
-                modifier_id=item_data.get("modifier_id"),
-                modifier_name=item_data.get("modifier_name"),
+                dish_name=change["name"],
+                quantity=new_quantity,
+                weight_g=dish["weight_g"],
             )
             self.db.add(order_item)
             self.db.flush()  # Получаем ID
 
             logger.debug(f"  ➕ Created order_item #{order_item.id}")
 
-        # Создаём PrintJob для этого item
-        jobs_created = self._create_print_jobs(order_item, dish)
+            # Печатаем все порции
+            logger.debug(f"  🖨️  Printing {new_quantity} portions (new item)")
+            jobs_created = self._create_print_jobs(order_item, dish, new_quantity)
 
         return {"jobs_created": jobs_created}
 
-    def _create_print_jobs(self, order_item: OrderItem, dish: Dict) -> int:
+    def _create_print_jobs(self, order_item: OrderItem, dish: Dict, quantity: int) -> int:
         """
         Создать PrintJob для order_item
 
         Args:
             order_item: OrderItem объект
             dish: Данные блюда из dishes_with_extras.sqlite
+            quantity: Количество порций для печати
 
         Returns:
             Количество созданных jobs
@@ -289,7 +344,7 @@ class OrderProcessor:
         jobs_created = 0
 
         # Создаём основные этикетки (по количеству порций)
-        for i in range(order_item.quantity):
+        for i in range(quantity):
             tspl = renderer.render({
                 "name": dish["name"],
                 "rk_code": dish["rkeeper_code"],
@@ -303,7 +358,9 @@ class OrderProcessor:
             })
 
             job = PrintJob(
+                order_id=order_item.order_id,
                 order_item_id=order_item.id,
+                label_type="MAIN",
                 tspl_data=tspl,
                 status="QUEUED",
                 retry_count=0,
@@ -315,7 +372,7 @@ class OrderProcessor:
         # Создаём дополнительные этикетки (если есть)
         if dish.get("has_extra_labels") and dish.get("extra_labels"):
             for extra in dish["extra_labels"]:
-                for i in range(order_item.quantity):
+                for i in range(quantity):
                     tspl = renderer.render({
                         "name": extra["extra_dish_name"],
                         "rk_code": dish["rkeeper_code"],
@@ -329,7 +386,9 @@ class OrderProcessor:
                     })
 
                     job = PrintJob(
+                        order_id=order_item.order_id,
                         order_item_id=order_item.id,
+                        label_type="EXTRA",
                         tspl_data=tspl,
                         status="QUEUED",
                         retry_count=0,
@@ -341,6 +400,20 @@ class OrderProcessor:
         logger.debug(f"    🖨️  Created {jobs_created} print jobs")
 
         return jobs_created
+
+    def _create_print_jobs_for_delta(self, order_item: OrderItem, dish: Dict, delta: int) -> int:
+        """
+        Создать PrintJob для дельты (только новые порции)
+
+        Args:
+            order_item: OrderItem объект
+            dish: Данные блюда из dishes_with_extras.sqlite
+            delta: Количество НОВЫХ порций
+
+        Returns:
+            Количество созданных jobs
+        """
+        return self._create_print_jobs(order_item, dish, delta)
 
     def _get_default_template(self) -> Template:
         """

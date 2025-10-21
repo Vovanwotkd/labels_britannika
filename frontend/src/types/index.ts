@@ -162,6 +162,7 @@ export interface SystemInfo {
     url: string
     user: string
     pass: string
+    logging: boolean
   }
   default_template_id: number
   templates: Template[]

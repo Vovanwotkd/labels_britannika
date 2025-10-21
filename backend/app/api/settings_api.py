@@ -381,6 +381,7 @@ async def get_system_info(
             "url": get_setting_value("rkeeper_url", ""),
             "user": get_setting_value("rkeeper_user", ""),
             "pass": get_setting_value("rkeeper_pass", ""),
+            "logging": get_setting_value("rkeeper_logging", "false").lower() in ("true", "1", "yes", "y"),
         },
         "default_template_id": int(get_setting_value("default_template_id", "1")),
         "templates": templates_list,

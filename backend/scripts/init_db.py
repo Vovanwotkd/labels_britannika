@@ -126,6 +126,11 @@ def create_default_settings():
             value="",
             description="Пароль для RKeeper"
         ),
+        Setting(
+            key="rkeeper_logging",
+            value="true",
+            description="Включить логирование RKeeper webhook событий в файл"
+        ),
         # Шаблон по умолчанию
         Setting(
             key="default_template_id",

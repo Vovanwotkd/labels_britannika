@@ -31,6 +31,7 @@ export default function SettingsPage() {
   const [rkUrl, setRkUrl] = useState('')
   const [rkUser, setRkUser] = useState('')
   const [rkPass, setRkPass] = useState('')
+  const [rkLogging, setRkLogging] = useState(false)
   const [defaultTemplateId, setDefaultTemplateId] = useState('')
   const [syncIntervalHours, setSyncIntervalHours] = useState('')
 
@@ -54,6 +55,7 @@ export default function SettingsPage() {
       setRkUrl(data.rkeeper.url)
       setRkUser(data.rkeeper.user)
       setRkPass(data.rkeeper.pass)
+      setRkLogging(data.rkeeper.logging)
       setDefaultTemplateId(data.default_template_id.toString())
     } catch (error) {
       console.error('Failed to load system info:', error)
@@ -85,6 +87,7 @@ export default function SettingsPage() {
         { key: 'rkeeper_url', value: rkUrl },
         { key: 'rkeeper_user', value: rkUser },
         { key: 'rkeeper_pass', value: rkPass },
+        { key: 'rkeeper_logging', value: rkLogging ? 'true' : 'false' },
         { key: 'default_template_id', value: defaultTemplateId },
         { key: 'sync_interval_hours', value: syncIntervalHours },
       ]
@@ -397,6 +400,33 @@ export default function SettingsPage() {
                 placeholder="••••••••"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={rkLogging}
+                onChange={(e) => setRkLogging(e.target.checked)}
+                className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500"
+              />
+              <span className="text-sm font-medium text-gray-700">
+                Включить логирование webhook событий
+              </span>
+            </label>
+            <p className="mt-1 ml-6 text-xs text-gray-500">
+              Записывать все входящие webhook события от RKeeper в файл для отладки
+            </p>
+            {rkLogging && (
+              <div className="mt-2 ml-6 p-3 bg-blue-50 rounded-md">
+                <p className="text-xs text-blue-800 font-mono">
+                  Для просмотра логов используйте команду:
+                </p>
+                <code className="block mt-1 text-xs text-blue-900 bg-white p-2 rounded border border-blue-200 overflow-x-auto">
+                  sudo docker exec britannica-backend tail -f /app/data/rkeeper_logs/webhook_$(date +%Y%m%d).log
+                </code>
+              </div>
+            )}
           </div>
         </div>
 
