@@ -8,11 +8,13 @@ import { ordersApi } from '../api/client'
 import { useWebSocketMessage } from '../contexts/WebSocketContext'
 import type {
   OrderListItem,
+  Order,
   WSOrderUpdate,
   WSPrintJobUpdate,
 } from '../types'
 import OrderCard from '../components/OrderCard'
 import TableSelectorModal from '../components/TableSelectorModal'
+import OrderDetailsModal from '../components/OrderDetailsModal'
 
 export default function OrdersBoard() {
   const [orders, setOrders] = useState<OrderListItem[]>([])
@@ -25,6 +27,8 @@ export default function OrdersBoard() {
   const [isTableModalOpen, setIsTableModalOpen] = useState(false)
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false)
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null)
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   // Закрытие dropdown при клике вне его области
@@ -129,10 +133,27 @@ export default function OrdersBoard() {
   }
 
   // Открыть детальный вид заказа
-  const handleOpenDetails = (orderId: number) => {
-    setSelectedOrderId(orderId)
-    // TODO: открыть модальное окно с деталями
-    console.log('Open order details:', orderId)
+  const handleOpenDetails = async (orderId: number) => {
+    try {
+      const orderData = await ordersApi.getById(orderId)
+      setSelectedOrder(orderData)
+      setIsDetailsModalOpen(true)
+    } catch (err) {
+      console.error('Failed to load order details:', err)
+      alert('Не удалось загрузить детали заказа')
+    }
+  }
+
+  // Печать отдельного блюда
+  const handlePrintDish = async (dishId: number, quantity: number) => {
+    try {
+      // TODO: Implement API call for printing single dish
+      console.log(`Printing dish ${dishId}, quantity: ${quantity}`)
+      await new Promise(resolve => setTimeout(resolve, 500)) // Simulate API call
+    } catch (err) {
+      console.error('Failed to print dish:', err)
+      alert('Не удалось напечатать блюдо')
+    }
   }
 
   // Удаление заказа
@@ -279,20 +300,16 @@ export default function OrdersBoard() {
         onSave={handleSaveTables}
       />
 
-      {/* TODO: Order Details Modal */}
-      {selectedOrderId && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
-            <h2 className="text-2xl font-bold mb-4">Детали заказа #{selectedOrderId}</h2>
-            <p className="text-gray-600 mb-4">Модальное окно в разработке...</p>
-            <button
-              onClick={() => setSelectedOrderId(null)}
-              className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300"
-            >
-              Закрыть
-            </button>
-          </div>
-        </div>
+      {/* Order Details Modal */}
+      {isDetailsModalOpen && selectedOrder && (
+        <OrderDetailsModal
+          order={selectedOrder}
+          onClose={() => {
+            setIsDetailsModalOpen(false)
+            setSelectedOrder(null)
+          }}
+          onPrintDish={handlePrintDish}
+        />
       )}
     </div>
   )

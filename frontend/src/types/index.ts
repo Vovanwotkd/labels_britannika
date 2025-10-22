@@ -52,6 +52,7 @@ export interface Order {
   order_ident: string
   table_code: string
   table_name: string
+  order_total: number | null
   waiter_code: string | null
   waiter_name: string | null
   status: 'NOT_PRINTED' | 'PRINTING' | 'DONE' | 'FAILED' | 'CANCELLED'
