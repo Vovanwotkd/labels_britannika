@@ -29,10 +29,10 @@ class PrintJobSchema(BaseModel):
     id: int
     status: str
     created_at: datetime
-    started_at: Optional[datetime]
-    printed_at: Optional[datetime]
+    started_at: Optional[datetime] = None
+    printed_at: Optional[datetime] = None
     retry_count: int
-    error_message: Optional[str]
+    error_message: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -42,12 +42,12 @@ class OrderItemSchema(BaseModel):
     """Схема OrderItem для ответа"""
     id: int
     rk_code: str
-    dish_name: Optional[str]
+    dish_name: Optional[str] = None
     quantity: int
-    weight_g: Optional[int]
-    printed_count: int
-    last_printed_at: Optional[datetime]
-    print_jobs: List[PrintJobSchema]
+    weight_g: Optional[float] = None
+    printed_count: int = 0
+    last_printed_at: Optional[datetime] = None
+    print_jobs: List[PrintJobSchema] = []
 
     class Config:
         from_attributes = True
