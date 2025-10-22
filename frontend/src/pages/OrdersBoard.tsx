@@ -259,7 +259,7 @@ export default function OrdersBoard() {
           <div className="text-gray-500">Заказов нет</div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-6 justify-items-center">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
           {sortedOrders.map((order) => (
             <OrderCard
               key={order.id}

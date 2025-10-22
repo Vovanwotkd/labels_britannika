@@ -16,7 +16,9 @@ interface OrderCardProps {
 export default function OrderCard({ order, onPrintAll, onOpenDetails, onDelete }: OrderCardProps) {
   const [isAnimating, setIsAnimating] = useState(false)
   const [showDeleteIcon, setShowDeleteIcon] = useState(false)
+  const [isLongPress, setIsLongPress] = useState(false)
   const longPressTimer = useRef<NodeJS.Timeout | null>(null)
+  const deleteIconTimer = useRef<NodeJS.Timeout | null>(null)
 
   // Мапим статусы на цвета
   const getStatusColor = (status: string) => {
@@ -48,18 +50,38 @@ export default function OrderCard({ order, onPrintAll, onOpenDetails, onDelete }
 
   const isPrinting = order.status === 'PRINTING'
 
-  // Очистка таймера при размонтировании
+  // Очистка таймеров при размонтировании
   useEffect(() => {
     return () => {
       if (longPressTimer.current) {
         clearTimeout(longPressTimer.current)
       }
+      if (deleteIconTimer.current) {
+        clearTimeout(deleteIconTimer.current)
+      }
     }
   }, [])
 
+  // Автоматическое скрытие иконки удаления через 2 секунды
+  useEffect(() => {
+    if (showDeleteIcon) {
+      deleteIconTimer.current = setTimeout(() => {
+        setShowDeleteIcon(false)
+      }, 2000) // 2 секунды
+
+      return () => {
+        if (deleteIconTimer.current) {
+          clearTimeout(deleteIconTimer.current)
+        }
+      }
+    }
+  }, [showDeleteIcon])
+
   // Долгое нажатие - показать иконку удаления
   const handleMouseDown = () => {
+    setIsLongPress(false)
     longPressTimer.current = setTimeout(() => {
+      setIsLongPress(true)
       setShowDeleteIcon(true)
     }, 800) // 800ms для долгого нажатия
   }
@@ -69,10 +91,14 @@ export default function OrderCard({ order, onPrintAll, onOpenDetails, onDelete }
       clearTimeout(longPressTimer.current)
       longPressTimer.current = null
     }
+    // Сброс флага долгого нажатия через небольшую задержку
+    setTimeout(() => setIsLongPress(false), 100)
   }
 
   const handleTouchStart = () => {
+    setIsLongPress(false)
     longPressTimer.current = setTimeout(() => {
+      setIsLongPress(true)
       setShowDeleteIcon(true)
     }, 800)
   }
@@ -82,12 +108,13 @@ export default function OrderCard({ order, onPrintAll, onOpenDetails, onDelete }
       clearTimeout(longPressTimer.current)
       longPressTimer.current = null
     }
+    setTimeout(() => setIsLongPress(false), 100)
   }
 
   // Клик на карточку - печатать все
   const handleCardClick = () => {
-    // Если показана иконка удаления, игнорируем клик
-    if (showDeleteIcon) return
+    // Если было долгое нажатие или показана иконка удаления, игнорируем клик
+    if (isLongPress || showDeleteIcon) return
 
     setIsAnimating(true)
     onPrintAll()
