@@ -1,10 +1,10 @@
 /**
- * Orders Board Page
- * Доска заказов с real-time обновлениями
+ * Orders Board Page - New Design
+ * Доска заказов с real-time обновлениями и новым дизайном карточек
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { ordersApi, rkeeperApi } from '../api/client'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { ordersApi } from '../api/client'
 import { useWebSocketMessage } from '../contexts/WebSocketContext'
 import type {
   OrderListItem,
@@ -24,6 +24,7 @@ export default function OrdersBoard() {
   }>({})
   const [isTableModalOpen, setIsTableModalOpen] = useState(false)
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false)
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   // Закрытие dropdown при клике вне его области
@@ -72,14 +73,8 @@ export default function OrdersBoard() {
       // Обновляем конкретный заказ
       loadOrders()
     } else if (message.event === 'order_cancelled') {
-      // Обновляем статус заказа
-      setOrders((prev) =>
-        prev.map((order) =>
-          order.id === message.order_id
-            ? { ...order, status: 'CANCELLED' }
-            : order
-        )
-      )
+      // Удаляем отмененный заказ из списка
+      setOrders((prev) => prev.filter((order) => order.id !== message.order_id))
     }
   })
 
@@ -87,87 +82,99 @@ export default function OrdersBoard() {
   useWebSocketMessage<WSPrintJobUpdate>('print_job_update', (message) => {
     console.log('Print job update:', message)
 
-    // Обновляем статистику заказа
-    setOrders((prev) =>
-      prev.map((order) => {
-        // Нужно пересчитать jobs_done, jobs_failed
-        // Для простоты - перезагружаем весь заказ
-        return order
-      })
-    )
-
     // Можно также перезагрузить весь список для точности
     if (message.status === 'DONE' || message.status === 'FAILED') {
       loadOrders()
     }
   })
 
-  const handleCancelOrder = async (orderId: number) => {
-    if (!confirm('Отменить заказ?')) return
+  // Фильтрация и сортировка заказов
+  const sortedOrders = useMemo(() => {
+    // 1. Фильтруем CANCELLED заказы (скрываем их)
+    let filtered = orders.filter((order) => order.status !== 'CANCELLED')
 
+    // 2. Сортируем по приоритету статусов
+    const statusPriority: Record<string, number> = {
+      'NOT_PRINTED': 1,  // Новые - вверху
+      'PRINTING': 1,     // Печатаются - тоже новые
+      'FAILED': 2,       // Ошибки - посередине
+      'DONE': 3,         // Готовые - внизу
+    }
+
+    filtered.sort((a, b) => {
+      const priorityA = statusPriority[a.status] || 999
+      const priorityB = statusPriority[b.status] || 999
+
+      // Сначала по приоритету статуса
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB
+      }
+
+      // Внутри одного статуса - по времени создания (новые первые)
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    })
+
+    return filtered
+  }, [orders])
+
+  // Печать всего заказа
+  const handlePrintAll = async (orderId: number) => {
     try {
-      await ordersApi.cancel(orderId)
-      // Обновим локально
-      setOrders((prev) =>
-        prev.map((order) =>
-          order.id === orderId ? { ...order, status: 'CANCELLED' } : order
-        )
-      )
+      // TODO: вызвать API для печати всего заказа
+      console.log('Print all labels for order:', orderId)
+      // await ordersApi.printOrder(orderId)
     } catch (err) {
-      alert('Ошибка отмены заказа')
-      console.error(err)
+      console.error('Failed to print order:', err)
     }
   }
 
-  const handleDeleteOrder = async (orderId: number) => {
-    if (!confirm('Удалить заказ из списка?')) return
-
-    try {
-      await ordersApi.delete(orderId)
-      // Удалим локально
-      setOrders((prev) => prev.filter((order) => order.id !== orderId))
-    } catch (err) {
-      alert('Ошибка удаления заказа')
-      console.error(err)
-    }
+  // Открыть детальный вид заказа
+  const handleOpenDetails = (orderId: number) => {
+    setSelectedOrderId(orderId)
+    // TODO: открыть модальное окно с деталями
+    console.log('Open order details:', orderId)
   }
 
-  const handleSaveTables = async (
-    selectedTables: Array<{ code: string; name: string }>
-  ) => {
-    await rkeeperApi.saveTables(selectedTables)
-    alert(`Сохранено ${selectedTables.length} столов`)
+  // Сохранение выбранных столов
+  const handleSaveTables = async () => {
+    // Перезагружаем заказы после изменения фильтра столов
+    await loadOrders()
+    setIsTableModalOpen(false)
   }
 
   if (loading && orders.length === 0) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="text-xl text-gray-600">Загрузка заказов...</div>
+        <div className="text-gray-500">Загрузка заказов...</div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="rounded-md bg-red-50 p-4">
-        <div className="text-sm text-red-800">{error}</div>
-        <button
-          onClick={loadOrders}
-          className="mt-2 text-sm text-red-600 underline"
-        >
-          Повторить
-        </button>
+      <div className="p-4">
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <div className="text-red-800 font-medium">Ошибка</div>
+          <div className="text-red-600 text-sm mt-1">{error}</div>
+          <button
+            onClick={loadOrders}
+            className="mt-2 text-sm text-red-600 underline"
+          >
+            Повторить
+          </button>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      {/* Header with Status filter */}
-      <div className="flex justify-between items-center mb-24 relative z-20">
+      {/* Header with Filters */}
+      <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-6">
           <h1 className="text-3xl font-bold text-gray-900">Заказы</h1>
 
+          {/* Status Filter */}
           <div className="flex items-center gap-2 relative">
             <label className="text-sm font-medium text-gray-700">Статус</label>
             <div className="relative" ref={dropdownRef}>
@@ -177,11 +184,9 @@ export default function OrdersBoard() {
                 className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white min-w-[180px] text-left flex justify-between items-center"
               >
                 <span>
-                  {filter.status === 'NOT_PRINTED' && 'Не напечатано'}
-                  {filter.status === 'PRINTING' && 'Печатается'}
-                  {filter.status === 'DONE' && 'Готово'}
-                  {filter.status === 'FAILED' && 'Ошибка'}
-                  {filter.status === 'CANCELLED' && 'Отменено'}
+                  {filter.status === 'NOT_PRINTED' && 'Новые'}
+                  {filter.status === 'DONE' && 'Напечатаны'}
+                  {filter.status === 'FAILED' && 'Ошибки'}
                   {!filter.status && 'Все'}
                 </span>
                 <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -193,11 +198,9 @@ export default function OrdersBoard() {
                 <div className="absolute top-full left-0 mt-1 w-full bg-white border-2 border-gray-400 rounded-md shadow-xl z-50">
                   {[
                     { value: '', label: 'Все' },
-                    { value: 'NOT_PRINTED', label: 'Не напечатано' },
-                    { value: 'PRINTING', label: 'Печатается' },
-                    { value: 'DONE', label: 'Готово' },
-                    { value: 'FAILED', label: 'Ошибка' },
-                    { value: 'CANCELLED', label: 'Отменено' },
+                    { value: 'NOT_PRINTED', label: 'Новые' },
+                    { value: 'DONE', label: 'Напечатаны' },
+                    { value: 'FAILED', label: 'Ошибки' },
                   ].map((option) => (
                     <button
                       key={option.value}
@@ -238,48 +241,19 @@ export default function OrdersBoard() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white shadow rounded-lg p-4">
-          <div className="text-sm text-gray-600">Всего заказов</div>
-          <div className="text-2xl font-bold text-gray-900">{orders.length}</div>
-        </div>
-
-        <div className="bg-white shadow rounded-lg p-4">
-          <div className="text-sm text-gray-600">Не напечатано</div>
-          <div className="text-2xl font-bold text-orange-600">
-            {orders.filter((o) => o.status === 'NOT_PRINTED').length}
-          </div>
-        </div>
-
-        <div className="bg-white shadow rounded-lg p-4">
-          <div className="text-sm text-gray-600">Готово</div>
-          <div className="text-2xl font-bold text-green-600">
-            {orders.filter((o) => o.status === 'DONE').length}
-          </div>
-        </div>
-
-        <div className="bg-white shadow rounded-lg p-4">
-          <div className="text-sm text-gray-600">Ошибки</div>
-          <div className="text-2xl font-bold text-red-600">
-            {orders.filter((o) => o.status === 'FAILED').length}
-          </div>
-        </div>
-      </div>
-
-      {/* Orders Grid */}
-      {orders.length === 0 ? (
+      {/* Orders Grid - 3 columns on desktop, 2 on tablet, 1 on mobile */}
+      {sortedOrders.length === 0 ? (
         <div className="text-center py-12 bg-white shadow rounded-lg">
           <div className="text-gray-500">Заказов нет</div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {orders.map((order) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
+          {sortedOrders.map((order) => (
             <OrderCard
               key={order.id}
               order={order}
-              onCancel={() => handleCancelOrder(order.id)}
-              onDelete={() => handleDeleteOrder(order.id)}
+              onPrintAll={() => handlePrintAll(order.id)}
+              onOpenDetails={() => handleOpenDetails(order.id)}
             />
           ))}
         </div>
@@ -291,6 +265,22 @@ export default function OrdersBoard() {
         onClose={() => setIsTableModalOpen(false)}
         onSave={handleSaveTables}
       />
+
+      {/* TODO: Order Details Modal */}
+      {selectedOrderId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
+            <h2 className="text-2xl font-bold mb-4">Детали заказа #{selectedOrderId}</h2>
+            <p className="text-gray-600 mb-4">Модальное окно в разработке...</p>
+            <button
+              onClick={() => setSelectedOrderId(null)}
+              className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300"
+            >
+              Закрыть
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

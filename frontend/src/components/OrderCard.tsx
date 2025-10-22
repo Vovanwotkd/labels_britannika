@@ -1,126 +1,127 @@
 /**
- * Order Card Component
- * Карточка заказа для доски
+ * Order Card Component - New Design
+ * Карточка заказа 220×220px с цветовой индикацией статуса
  */
 
+import { useState } from 'react'
 import type { OrderListItem } from '../types'
 
 interface OrderCardProps {
   order: OrderListItem
-  onCancel: () => void
-  onDelete: () => void
+  onPrintAll: () => void
+  onOpenDetails: () => void
 }
 
-export default function OrderCard({ order, onCancel, onDelete }: OrderCardProps) {
-  const getStatusBadge = (status: string) => {
-    const badges = {
-      NOT_PRINTED: 'bg-orange-100 text-orange-800',
-      PRINTING: 'bg-blue-100 text-blue-800',
-      DONE: 'bg-green-100 text-green-800',
-      FAILED: 'bg-red-100 text-red-800',
-      CANCELLED: 'bg-gray-100 text-gray-800',
-    }
+export default function OrderCard({ order, onPrintAll, onOpenDetails }: OrderCardProps) {
+  const [isAnimating, setIsAnimating] = useState(false)
 
-    const labels = {
-      NOT_PRINTED: 'Не напечатано',
-      PRINTING: 'Печатается',
-      DONE: 'Готово',
-      FAILED: 'Ошибка',
-      CANCELLED: 'Отменено',
+  // Мапим статусы на цвета
+  const getStatusColor = (status: string) => {
+    if (status === 'DONE') {
+      return 'bg-[#D8F7D0]' // Зелёный - напечатан
+    } else if (status === 'FAILED') {
+      return 'bg-[#FFD6D6]' // Красный - ошибка
+    } else {
+      // NOT_PRINTED, PRINTING - голубой (новый)
+      return 'bg-[#D6E8FF]'
     }
-
-    return (
-      <span
-        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-          badges[status as keyof typeof badges] || 'bg-gray-100 text-gray-800'
-        }`}
-      >
-        {labels[status as keyof typeof labels] || status}
-      </span>
-    )
   }
 
+  // Иконка в зависимости от статуса
+  const getStatusIcon = (status: string) => {
+    if (status === 'DONE') {
+      return '✓' // Галочка для готовых
+    } else if (status === 'FAILED') {
+      return '✕' // Крестик для ошибок
+    } else {
+      return '🍽️' // Блюдо для новых
+    }
+  }
+
+  // Прогресс печати
   const progressPercent = order.jobs_count > 0
     ? Math.round((order.jobs_done / order.jobs_count) * 100)
     : 0
 
+  const isPrinting = order.status === 'PRINTING'
+
+  // Клик на карточку - печатать все
+  const handleCardClick = () => {
+    setIsAnimating(true)
+    onPrintAll()
+    // Анимация мигания 500мс
+    setTimeout(() => setIsAnimating(false), 500)
+  }
+
+  // Клик на кнопку "Открыть" - не должен триггерить печать
+  const handleOpenClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onOpenDetails()
+  }
+
+  // Форматирование суммы
+  const formatSum = (sum: number | null) => {
+    if (!sum) return '0 ₽'
+    return `${sum.toFixed(0)} ₽`
+  }
+
   return (
-    <div className="bg-white shadow rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
-      {/* Header */}
-      <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-        <div className="flex justify-between items-start">
-          <div>
-            <div className="text-lg font-semibold text-gray-900">
-              {order.table_name}
-            </div>
-            <div className="text-sm text-gray-600">
-              Заказ #{order.order_ident}
-            </div>
-          </div>
-          <div>{getStatusBadge(order.status)}</div>
-        </div>
+    <div
+      onClick={handleCardClick}
+      className={`
+        relative w-[220px] h-[220px] rounded-lg shadow-md
+        flex flex-col items-center justify-between p-4
+        cursor-pointer transition-all duration-300
+        hover:shadow-xl hover:scale-105
+        ${getStatusColor(order.status)}
+        ${isAnimating ? 'animate-pulse' : ''}
+      `}
+    >
+      {/* Иконка статуса */}
+      <div className="text-4xl mb-2">
+        {getStatusIcon(order.status)}
       </div>
 
-      {/* Body */}
-      <div className="px-4 py-3 space-y-3">
-        {/* Info */}
-        <div className="text-sm text-gray-600 space-y-1">
-          <div>Visit: {order.visit_id}</div>
-          <div>Столов: {order.table_code}</div>
-          <div>Блюд: {order.items_count}</div>
-        </div>
-
-        {/* Progress */}
-        <div>
-          <div className="flex justify-between text-sm text-gray-600 mb-1">
-            <span>Печать</span>
-            <span>
-              {order.jobs_done} / {order.jobs_count}
-            </span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div
-              className={`h-2 rounded-full transition-all ${
-                order.jobs_failed > 0
-                  ? 'bg-red-600'
-                  : order.jobs_done === order.jobs_count
-                  ? 'bg-green-600'
-                  : 'bg-blue-600'
-              }`}
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-          {order.jobs_failed > 0 && (
-            <div className="text-xs text-red-600 mt-1">
-              Ошибок: {order.jobs_failed}
-            </div>
-          )}
-        </div>
-
-        {/* Time */}
-        <div className="text-xs text-gray-500">
-          Создан: {new Date(order.created_at).toLocaleString('ru-RU')}
-        </div>
+      {/* Номер заказа (visit_id) */}
+      <div className="text-2xl font-bold text-gray-900 mb-1">
+        #{order.visit_id}
       </div>
 
-      {/* Actions */}
-      <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 flex space-x-2">
-        {order.status !== 'CANCELLED' && (
-          <button
-            onClick={onCancel}
-            className="flex-1 px-3 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
-          >
-            Отменить
-          </button>
-        )}
-
-        <button
-          onClick={onDelete}
-          className="flex-1 px-3 py-2 text-sm text-red-700 bg-white border border-red-300 rounded-md hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500"
-        >
-          Удалить
-        </button>
+      {/* Сумма заказа */}
+      <div className="text-xl font-semibold text-gray-800 mb-2">
+        {formatSum(order.order_total)}
       </div>
+
+      {/* Стол и количество блюд */}
+      <div className="text-sm text-gray-700 text-center mb-3">
+        Стол {order.table_code} • {order.items_count} блюд{order.items_count !== 1 && 'а'}
+      </div>
+
+      {/* Полоска прогресса (если печатается) */}
+      {isPrinting && (
+        <div className="w-full h-1 bg-gray-300 rounded-full overflow-hidden mb-3">
+          <div
+            className="h-full bg-blue-500 transition-all duration-300"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+      )}
+
+      {/* Кнопка "Открыть" */}
+      <button
+        onClick={handleOpenClick}
+        className="
+          w-[80%] py-2 px-4
+          bg-white/80 hover:bg-white
+          text-gray-800 text-sm font-medium
+          rounded-md shadow-sm
+          transition-all duration-200
+          flex items-center justify-center gap-2
+        "
+      >
+        Открыть
+        <span className="text-gray-600">→</span>
+      </button>
     </div>
   )
 }

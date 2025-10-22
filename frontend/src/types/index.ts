@@ -66,6 +66,7 @@ export interface OrderListItem {
   order_ident: string
   table_code: string
   table_name: string
+  order_total: number | null
   status: 'NOT_PRINTED' | 'PRINTING' | 'DONE' | 'FAILED' | 'CANCELLED'
   created_at: string
   updated_at: string
