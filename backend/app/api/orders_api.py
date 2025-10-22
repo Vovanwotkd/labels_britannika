@@ -42,13 +42,11 @@ class OrderItemSchema(BaseModel):
     """Схема OrderItem для ответа"""
     id: int
     rk_code: str
-    name: str
-    uni: int
+    dish_name: Optional[str]
     quantity: int
-    price: float
-    modifier_id: Optional[str]
-    modifier_name: Optional[str]
-    created_at: datetime
+    weight_g: Optional[int]
+    printed_count: int
+    last_printed_at: Optional[datetime]
     print_jobs: List[PrintJobSchema]
 
     class Config:

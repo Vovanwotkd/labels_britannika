@@ -69,7 +69,7 @@ export default function OrderDetailsModal({ order, onClose, onPrintDish }: Order
                   className="px-6 py-4 hover:bg-gray-50 transition-colors flex items-center justify-between"
                 >
                   <div className="flex-1">
-                    <span className="text-gray-900">{item.name}</span>
+                    <span className="text-gray-900">{item.dish_name || item.rk_code}</span>
                   </div>
                   <div className="flex items-center gap-4">
                     <span className="font-bold text-gray-700">× {item.quantity}</span>

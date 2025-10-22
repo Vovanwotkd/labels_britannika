@@ -36,13 +36,11 @@ export interface PrintJob {
 export interface OrderItem {
   id: number
   rk_code: string
-  name: string
-  uni: number
+  dish_name: string | null
   quantity: number
-  price: number
-  modifier_id: string | null
-  modifier_name: string | null
-  created_at: string
+  weight_g: number | null
+  printed_count: number
+  last_printed_at: string | null
   print_jobs: PrintJob[]
 }
 
@@ -51,10 +49,7 @@ export interface Order {
   visit_id: string
   order_ident: string
   table_code: string
-  table_name: string
   order_total: number | null
-  waiter_code: string | null
-  waiter_name: string | null
   status: 'NOT_PRINTED' | 'PRINTING' | 'DONE' | 'FAILED' | 'CANCELLED'
   created_at: string
   updated_at: string
@@ -66,7 +61,6 @@ export interface OrderListItem {
   visit_id: string
   order_ident: string
   table_code: string
-  table_name: string
   order_total: number | null
   status: 'NOT_PRINTED' | 'PRINTING' | 'DONE' | 'FAILED' | 'CANCELLED'
   created_at: string
