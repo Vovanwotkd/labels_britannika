@@ -26,7 +26,6 @@ export default function OrdersBoard() {
   }>({})
   const [isTableModalOpen, setIsTableModalOpen] = useState(false)
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false)
-  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null)
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
