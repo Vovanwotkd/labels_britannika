@@ -3,17 +3,20 @@
  * Карточка заказа 220×220px с цветовой индикацией статуса
  */
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import type { OrderListItem } from '../types'
 
 interface OrderCardProps {
   order: OrderListItem
   onPrintAll: () => void
   onOpenDetails: () => void
+  onDelete: () => void
 }
 
-export default function OrderCard({ order, onPrintAll, onOpenDetails }: OrderCardProps) {
+export default function OrderCard({ order, onPrintAll, onOpenDetails, onDelete }: OrderCardProps) {
   const [isAnimating, setIsAnimating] = useState(false)
+  const [showDeleteIcon, setShowDeleteIcon] = useState(false)
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null)
 
   // Мапим статусы на цвета
   const getStatusColor = (status: string) => {
@@ -45,8 +48,47 @@ export default function OrderCard({ order, onPrintAll, onOpenDetails }: OrderCar
 
   const isPrinting = order.status === 'PRINTING'
 
+  // Очистка таймера при размонтировании
+  useEffect(() => {
+    return () => {
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current)
+      }
+    }
+  }, [])
+
+  // Долгое нажатие - показать иконку удаления
+  const handleMouseDown = () => {
+    longPressTimer.current = setTimeout(() => {
+      setShowDeleteIcon(true)
+    }, 800) // 800ms для долгого нажатия
+  }
+
+  const handleMouseUp = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+  }
+
+  const handleTouchStart = () => {
+    longPressTimer.current = setTimeout(() => {
+      setShowDeleteIcon(true)
+    }, 800)
+  }
+
+  const handleTouchEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+  }
+
   // Клик на карточку - печатать все
   const handleCardClick = () => {
+    // Если показана иконка удаления, игнорируем клик
+    if (showDeleteIcon) return
+
     setIsAnimating(true)
     onPrintAll()
     // Анимация мигания 500мс
@@ -59,6 +101,15 @@ export default function OrderCard({ order, onPrintAll, onOpenDetails }: OrderCar
     onOpenDetails()
   }
 
+  // Клик на иконку удаления
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (confirm(`Удалить заказ #${order.visit_id}?`)) {
+      onDelete()
+    }
+    setShowDeleteIcon(false)
+  }
+
   // Форматирование суммы
   const formatSum = (sum: number | null) => {
     if (!sum) return '0 ₽'
@@ -68,6 +119,11 @@ export default function OrderCard({ order, onPrintAll, onOpenDetails }: OrderCar
   return (
     <div
       onClick={handleCardClick}
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
       className={`
         relative w-[220px] h-[220px] rounded-lg shadow-md
         flex flex-col items-center justify-between p-4
@@ -77,19 +133,29 @@ export default function OrderCard({ order, onPrintAll, onOpenDetails }: OrderCar
         ${isAnimating ? 'animate-pulse' : ''}
       `}
     >
+      {/* Иконка удаления (при долгом нажатии) */}
+      {showDeleteIcon && (
+        <button
+          onClick={handleDeleteClick}
+          className="absolute top-2 right-2 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg z-10 transition-all"
+        >
+          🗑️
+        </button>
+      )}
+
       {/* Иконка статуса */}
       <div className="text-4xl mb-2">
         {getStatusIcon(order.status)}
       </div>
 
-      {/* Номер заказа (visit_id) */}
-      <div className="text-2xl font-bold text-gray-900 mb-1">
-        #{order.visit_id}
+      {/* Сумма заказа (ВВЕРХУ, ЖИРНЫМ) */}
+      <div className="text-3xl font-bold text-gray-900 mb-1">
+        {formatSum(order.order_total)}
       </div>
 
-      {/* Сумма заказа */}
-      <div className="text-xl font-semibold text-gray-800 mb-2">
-        {formatSum(order.order_total)}
+      {/* Номер заказа visit_id (обычным шрифтом) */}
+      <div className="text-lg text-gray-700 mb-2">
+        #{order.visit_id}
       </div>
 
       {/* Стол и количество блюд */}

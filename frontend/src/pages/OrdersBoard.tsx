@@ -135,6 +135,18 @@ export default function OrdersBoard() {
     console.log('Open order details:', orderId)
   }
 
+  // Удаление заказа
+  const handleDeleteOrder = async (orderId: number) => {
+    try {
+      await ordersApi.delete(orderId)
+      // Удаляем из списка
+      setOrders((prev) => prev.filter((order) => order.id !== orderId))
+    } catch (err) {
+      console.error('Failed to delete order:', err)
+      alert('Не удалось удалить заказ')
+    }
+  }
+
   // Сохранение выбранных столов
   const handleSaveTables = async () => {
     // Перезагружаем заказы после изменения фильтра столов
@@ -183,11 +195,11 @@ export default function OrdersBoard() {
                 onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
                 className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white min-w-[180px] text-left flex justify-between items-center"
               >
-                <span>
-                  {filter.status === 'NOT_PRINTED' && 'Новые'}
-                  {filter.status === 'DONE' && 'Напечатаны'}
-                  {filter.status === 'FAILED' && 'Ошибки'}
-                  {!filter.status && 'Все'}
+                <span className="text-gray-900">
+                  {filter.status === 'NOT_PRINTED' ? 'Новые' :
+                   filter.status === 'DONE' ? 'Напечатаны' :
+                   filter.status === 'FAILED' ? 'Ошибки' :
+                   'Все'}
                 </span>
                 <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -247,13 +259,14 @@ export default function OrdersBoard() {
           <div className="text-gray-500">Заказов нет</div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-6 justify-items-center">
           {sortedOrders.map((order) => (
             <OrderCard
               key={order.id}
               order={order}
               onPrintAll={() => handlePrintAll(order.id)}
               onOpenDetails={() => handleOpenDetails(order.id)}
+              onDelete={() => handleDeleteOrder(order.id)}
             />
           ))}
         </div>
