@@ -104,6 +104,7 @@ class BitmapRenderer:
 
         # Формируем TSPL команду
         # BITMAP x, y, width_bytes, height, mode, data
-        tspl = f"BITMAP {x},{y},{bytes_per_row},{height},1,{''.join(bitmap_data)}\n"
+        # mode: 0=OVERWRITE (recommended), 1=OR, 2=XOR
+        tspl = f"BITMAP {x},{y},{bytes_per_row},{height},0,{''.join(bitmap_data)}\n"
 
         return tspl
