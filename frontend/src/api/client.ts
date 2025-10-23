@@ -10,6 +10,7 @@ import type {
   Setting,
   TableFilter,
   SystemInfo,
+  PrinterInfo,
 } from '../types'
 
 const API_BASE_URL = '/api'
@@ -310,4 +311,20 @@ export const syncApi = {
     fetchApi<SyncTriggerResponse>('/sync/trigger', {
       method: 'POST',
     }),
+}
+
+// ============================================================================
+// Printers API
+// ============================================================================
+
+export interface PrintersListResponse {
+  printers: PrinterInfo[]
+  count: number
+}
+
+export const printersApi = {
+  getList: () => fetchApi<PrintersListResponse>('/printers/list'),
+
+  getStatus: (printerName: string) =>
+    fetchApi<PrinterInfo>(`/printers/${encodeURIComponent(printerName)}/status`),
 }

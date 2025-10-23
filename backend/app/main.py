@@ -128,7 +128,7 @@ async def health_check():
 # API ROUTERS
 # ============================================================================
 
-from app.api import print_api, webhook_api, orders_api, websocket_api, auth_api, settings_api, test_connection_api, rkeeper_api, templates_api, sync_api
+from app.api import print_api, webhook_api, orders_api, websocket_api, auth_api, settings_api, test_connection_api, rkeeper_api, templates_api, sync_api, printers_api
 
 app.include_router(print_api.router)
 app.include_router(webhook_api.router)
@@ -140,6 +140,7 @@ app.include_router(test_connection_api.router)
 app.include_router(rkeeper_api.router)
 app.include_router(templates_api.router)
 app.include_router(sync_api.router)
+app.include_router(printers_api.router)
 
 # TODO: Добавить остальные роутеры
 # from app.api import templates, users

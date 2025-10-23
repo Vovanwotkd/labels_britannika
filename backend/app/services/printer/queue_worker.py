@@ -121,13 +121,114 @@ class PrintQueueWorker:
 
         return PrinterClient(printer_ip, printer_port)
 
+    async def _print_via_tcp(self, db: Session, job: PrintJob) -> bool:
+        """
+        Печать через TCP с использованием raw TSPL
+
+        Args:
+            db: Сессия БД
+            job: Задание на печать
+
+        Returns:
+            True если успешно, False при ошибке
+        """
+        try:
+            # Получаем PrinterClient с актуальными настройками
+            printer_client = self._get_printer_client(db)
+
+            # job.tspl_data уже содержит готовый TSPL код
+            success = printer_client.send_tspl(job.tspl_data)
+
+            return success
+
+        except Exception as e:
+            logger.error(f"Ошибка печати через TCP: {e}", exc_info=True)
+            return False
+
+    async def _print_via_cups(self, db: Session, job: PrintJob) -> bool:
+        """
+        Печать через CUPS драйвер с использованием PNG рендеринга
+
+        Args:
+            db: Сессия БД
+            job: Задание на печать
+
+        Returns:
+            True если успешно, False при ошибке
+        """
+        try:
+            from app.models import Setting, OrderItem, Template
+            from app.services.printer.cups_client import CUPSPrinterClient
+            from app.services.printer.image_label_renderer import ImageLabelRenderer
+            from app.core.database import dishes_db
+
+            # 1. Получаем имя CUPS принтера из настроек
+            printer_name_setting = db.query(Setting).filter(Setting.key == "printer_name").first()
+            if not printer_name_setting or not printer_name_setting.value:
+                raise ValueError("CUPS printer name not configured in settings")
+
+            printer_name = printer_name_setting.value
+            logger.info(f"📝 Используем CUPS принтер: {printer_name}")
+
+            # 2. Получаем OrderItem для доступа к данным заказа
+            order_item = db.query(OrderItem).filter(OrderItem.id == job.order_item_id).first()
+            if not order_item:
+                raise ValueError(f"OrderItem {job.order_item_id} not found")
+
+            # 3. Получаем данные блюда из dishes_db
+            dish = dishes_db.get_dish_by_rk_code(order_item.rkeeper_code)
+            if not dish:
+                raise ValueError(f"Dish with rk_code={order_item.rkeeper_code} not found in dishes DB")
+
+            # 4. Получаем шаблон
+            template = db.query(Template).filter(Template.is_default == True).first()
+            if not template:
+                raise ValueError("No default template found")
+
+            # 5. Подготавливаем данные для рендеринга
+            dish_data = {
+                "name": dish["name"],
+                "rk_code": dish["rkeeper_code"],
+                "weight_g": dish["weight_g"],
+                "calories": dish["calories"],
+                "protein": dish["protein"],
+                "fat": dish["fat"],
+                "carbs": dish["carbs"],
+                "ingredients": dish.get("ingredients", []),
+                "label_type": order_item.label_type or "MAIN",
+                # Дополнительные данные из order_item
+                "best_before_hours": order_item.best_before_hours,
+                "production_datetime": order_item.production_datetime,
+            }
+
+            # 6. Генерируем PNG
+            logger.info(f"🎨 Генерируем PNG для блюда: {dish_data['name']}")
+            renderer = ImageLabelRenderer(template.config)
+            png_bytes = renderer.render(dish_data)
+
+            logger.info(f"✅ PNG сгенерирован: {len(png_bytes)} bytes ({len(png_bytes)/1024:.2f} KB)")
+
+            # 7. Отправляем на печать через CUPS
+            cups_client = CUPSPrinterClient(printer_name, cups_server="host.docker.internal")
+            success = cups_client.print_image_data(
+                png_bytes,
+                filename=f"label_{job.id}.png",
+                copies=1
+            )
+
+            return success
+
+        except Exception as e:
+            logger.error(f"Ошибка печати через CUPS: {e}", exc_info=True)
+            return False
+
     async def _process_next_job(self):
         """
         Обработать следующее задание из очереди
 
         1. Берём первое задание со статусом QUEUED
         2. Меняем статус на PRINTING
-        3. Отправляем на принтер
+        3. Отправляем на принтер (CUPS или TCP в зависимости от настроек)
         4. Меняем статус на DONE или FAILED
         5. При ошибке - retry (если не превышен лимит)
         """
@@ -146,9 +247,6 @@ class PrintQueueWorker:
 
             logger.info(f"📄 Обработка job #{job.id} (order_item_id={job.order_item_id})")
 
-            # Получаем актуальные настройки принтера из БД
-            printer_client = self._get_printer_client(db)
-
             # Меняем статус на PRINTING
             job.status = "PRINTING"
             job.started_at = datetime.now()
@@ -163,11 +261,19 @@ class PrintQueueWorker:
 
             # Отправляем на принтер
             try:
-                # Используем asyncio.to_thread для блокирующей операции
-                success = await asyncio.to_thread(
-                    printer_client.send,
-                    job.tspl_data
-                )
+                # Проверяем тип подключения к принтеру
+                from app.models import Setting
+                printer_type_setting = db.query(Setting).filter(Setting.key == "printer_type").first()
+                printer_type = printer_type_setting.value if printer_type_setting else "tcp"
+
+                success = False
+
+                if printer_type == "cups":
+                    # Печать через CUPS драйвер
+                    success = await self._print_via_cups(db, job)
+                else:
+                    # Печать через TCP (raw TSPL)
+                    success = await self._print_via_tcp(db, job)
 
                 if success:
                     # Успешно напечатано

@@ -10,6 +10,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     gcc \
     fonts-dejavu-core \
+    cups-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Копируем requirements

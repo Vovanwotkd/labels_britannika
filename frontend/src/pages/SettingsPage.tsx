@@ -4,8 +4,8 @@
  */
 
 import { useState, useEffect } from 'react'
-import { settingsApi, testConnectionApi, syncApi } from '../api/client'
-import type { SystemInfo } from '../types'
+import { settingsApi, testConnectionApi, syncApi, printersApi } from '../api/client'
+import type { SystemInfo, PrinterInfo } from '../types'
 import type { SyncStatus } from '../api/client'
 
 export default function SettingsPage() {
@@ -23,8 +23,12 @@ export default function SettingsPage() {
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null)
 
   // Редактируемые настройки
+  const [printerType, setPrinterType] = useState('tcp')
   const [printerIp, setPrinterIp] = useState('')
   const [printerPort, setPrinterPort] = useState('')
+  const [printerName, setPrinterName] = useState('')
+  const [cupsPrinters, setCupsPrinters] = useState<PrinterInfo[]>([])
+  const [loadingPrinters, setLoadingPrinters] = useState(false)
   const [sh5Url, setSh5Url] = useState('')
   const [sh5User, setSh5User] = useState('')
   const [sh5Pass, setSh5Pass] = useState('')
@@ -47,8 +51,10 @@ export default function SettingsPage() {
       setSystemInfo(data)
 
       // Заполняем поля текущими значениями
+      setPrinterType(data.printer.type || 'tcp')
       setPrinterIp(data.printer.ip)
       setPrinterPort(data.printer.port.toString())
+      setPrinterName(data.printer.name || '')
       setSh5Url(data.storehouse.url)
       setSh5User(data.storehouse.user)
       setSh5Pass(data.storehouse.pass)
@@ -74,13 +80,35 @@ export default function SettingsPage() {
     }
   }
 
+  const loadCupsPrinters = async () => {
+    try {
+      setLoadingPrinters(true)
+      const data = await printersApi.getList()
+      setCupsPrinters(data.printers)
+    } catch (error) {
+      console.error('Failed to load CUPS printers:', error)
+      alert('Ошибка загрузки списка CUPS принтеров. Убедитесь, что CUPS настроен на сервере.')
+    } finally {
+      setLoadingPrinters(false)
+    }
+  }
+
+  // Загружаем список CUPS принтеров при переключении на CUPS режим
+  useEffect(() => {
+    if (printerType === 'cups' && cupsPrinters.length === 0) {
+      loadCupsPrinters()
+    }
+  }, [printerType])
+
   const saveSettings = async () => {
     try {
       setSaving(true)
 
       const settings = [
+        { key: 'printer_type', value: printerType },
         { key: 'printer_ip', value: printerIp },
         { key: 'printer_port', value: printerPort },
+        { key: 'printer_name', value: printerName },
         { key: 'sh5_url', value: sh5Url },
         { key: 'sh5_user', value: sh5User },
         { key: 'sh5_pass', value: sh5Pass },
@@ -211,33 +239,120 @@ export default function SettingsPage() {
       <div className="bg-white shadow rounded-lg p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Принтер</h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              IP адрес
+        {/* Printer Type Selection */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Тип подключения
+          </label>
+          <div className="flex gap-6">
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="radio"
+                value="tcp"
+                checked={printerType === 'tcp'}
+                onChange={(e) => setPrinterType(e.target.value)}
+                className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-2 focus:ring-primary-500"
+              />
+              <span className="ml-2 text-sm text-gray-700">
+                TCP (Raw TSPL)
+              </span>
             </label>
-            <input
-              type="text"
-              value={printerIp}
-              onChange={(e) => setPrinterIp(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono"
-              placeholder="192.168.1.10"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Порт
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="radio"
+                value="cups"
+                checked={printerType === 'cups'}
+                onChange={(e) => setPrinterType(e.target.value)}
+                className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-2 focus:ring-primary-500"
+              />
+              <span className="ml-2 text-sm text-gray-700">
+                CUPS (Драйвер)
+              </span>
             </label>
-            <input
-              type="text"
-              value={printerPort}
-              onChange={(e) => setPrinterPort(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono"
-              placeholder="9100"
-            />
           </div>
+          <p className="mt-1 text-xs text-gray-500">
+            {printerType === 'tcp'
+              ? 'Прямая отправка TSPL команд на IP:Port принтера (legacy режим)'
+              : 'Печать через CUPS драйвер (рекомендуется, поддерживает кириллицу)'}
+          </p>
         </div>
+
+        {/* TCP Mode Settings */}
+        {printerType === 'tcp' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                IP адрес
+              </label>
+              <input
+                type="text"
+                value={printerIp}
+                onChange={(e) => setPrinterIp(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono"
+                placeholder="10.55.3.254"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Порт
+              </label>
+              <input
+                type="text"
+                value={printerPort}
+                onChange={(e) => setPrinterPort(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono"
+                placeholder="9100"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* CUPS Mode Settings */}
+        {printerType === 'cups' && (
+          <div className="space-y-4">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm font-medium text-gray-700">
+                  CUPS принтер
+                </label>
+                <button
+                  onClick={loadCupsPrinters}
+                  disabled={loadingPrinters}
+                  className="text-xs text-primary-600 hover:text-primary-700 disabled:opacity-50"
+                >
+                  {loadingPrinters ? 'Загрузка...' : 'Обновить список'}
+                </button>
+              </div>
+              <select
+                value={printerName}
+                onChange={(e) => setPrinterName(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                disabled={loadingPrinters}
+              >
+                <option value="">-- Выберите принтер --</option>
+                {cupsPrinters.map((printer) => (
+                  <option key={printer.name} value={printer.name}>
+                    {printer.name} {printer.online ? '(online)' : '(offline)'}
+                  </option>
+                ))}
+              </select>
+              {cupsPrinters.length === 0 && !loadingPrinters && (
+                <p className="mt-1 text-xs text-red-600">
+                  Принтеры не найдены. Убедитесь, что CUPS настроен на сервере.
+                </p>
+              )}
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+              <p className="text-xs text-blue-800">
+                <strong>Требуется:</strong> CUPS установлен на хост-сервере и настроен принтер.
+                <br />
+                См. <code className="bg-white px-1 py-0.5 rounded">INSTALL.md</code> для инструкций.
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="mt-4">
           <button

@@ -135,14 +135,22 @@ export interface Template {
   is_default: boolean
 }
 
+export interface PrinterInfo {
+  name: string
+  online: boolean
+  status: string
+}
+
 export interface SystemInfo {
   app_name: string
   version: string
   environment: string
   timezone: string
   printer: {
+    type: string  // "tcp" or "cups"
     ip: string
     port: number
+    name: string  // CUPS printer name
   }
   label: {
     width: number
