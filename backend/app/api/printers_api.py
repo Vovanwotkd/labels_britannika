@@ -40,13 +40,11 @@ class PrintersListResponse(BaseModel):
 # ============================================================================
 
 @router.get("/list", response_model=PrintersListResponse)
-async def get_cups_printers(
-    current_user: User = Depends(require_auth)
-):
+async def get_cups_printers():
     """
     Получить список доступных CUPS принтеров
 
-    Требует аутентификации
+    Публичный endpoint для страницы настроек
     """
     try:
         # Получаем список принтеров из CUPS
