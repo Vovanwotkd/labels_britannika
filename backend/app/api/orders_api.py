@@ -309,6 +309,7 @@ async def reprint_item(
         job = PrintJob(
             order_id=order_item.order_id,
             order_item_id=order_item.id,
+            label_type="MAIN",
             tspl_data=tspl,
             status="QUEUED",
             retry_count=0,
@@ -336,6 +337,7 @@ async def reprint_item(
                 job = PrintJob(
                     order_id=order_item.order_id,
                     order_item_id=order_item.id,
+                    label_type="EXTRA",
                     tspl_data=tspl,
                     status="QUEUED",
                     retry_count=0,
