@@ -137,7 +137,7 @@ class PrintQueueWorker:
             printer_client = self._get_printer_client(db)
 
             # job.tspl_data уже содержит готовый TSPL код
-            success = printer_client.send_tspl(job.tspl_data)
+            success = printer_client.send(job.tspl_data)
 
             return success
 
