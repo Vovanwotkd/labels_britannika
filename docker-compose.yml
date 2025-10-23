@@ -26,6 +26,7 @@ services:
       - PRINTER_IP=${PRINTER_IP:-192.168.1.10}
       - PRINTER_PORT=${PRINTER_PORT:-9100}
       - PRINTER_TIMEOUT=${PRINTER_TIMEOUT:-5}
+      - CUPS_SERVER=172.17.0.1
 
       # Безопасность
       - SECRET_KEY=${SECRET_KEY}
