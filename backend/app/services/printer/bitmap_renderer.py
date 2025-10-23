@@ -94,8 +94,8 @@ class BitmapRenderer:
                     if pixel_x < width:
                         # Получаем пиксель (0=черный, 1=белый в mode '1')
                         pixel = img.getpixel((pixel_x, row))
-                        # Инвертируем для TSPL (0=белый, 1=черный)
-                        if pixel == 0:
+                        # TSPL: попробуем без инверсии (1=черный)
+                        if pixel == 1:
                             byte_value |= (1 << (7 - bit_idx))
 
                 row_bytes.append(f"{byte_value:02X}")
