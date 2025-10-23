@@ -195,10 +195,7 @@ class PrintQueueWorker:
                 "fat": dish["fat"],
                 "carbs": dish["carbs"],
                 "ingredients": dish.get("ingredients", []),
-                "label_type": order_item.label_type or "MAIN",
-                # Дополнительные данные из order_item
-                "best_before_hours": order_item.best_before_hours,
-                "production_datetime": order_item.production_datetime,
+                "label_type": job.label_type or "MAIN",  # label_type is in PrintJob, not OrderItem
             }
 
             # 6. Генерируем PNG
