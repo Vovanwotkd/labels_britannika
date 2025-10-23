@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react'
 import { settingsApi, testConnectionApi, syncApi, printersApi } from '../api/client'
-import type { SystemInfo, PrinterInfo } from '../types'
+import type { SystemInfo } from '../types'
 import type { SyncStatus } from '../api/client'
 
 export default function SettingsPage() {
@@ -27,7 +27,7 @@ export default function SettingsPage() {
   const [printerIp, setPrinterIp] = useState('')
   const [printerPort, setPrinterPort] = useState('')
   const [printerName, setPrinterName] = useState('')
-  const [cupsPrinters, setCupsPrinters] = useState<PrinterInfo[]>([])
+  const [cupsPrinters, setCupsPrinters] = useState<string[]>([])
   const [loadingPrinters, setLoadingPrinters] = useState(false)
   const [sh5Url, setSh5Url] = useState('')
   const [sh5User, setSh5User] = useState('')
@@ -332,8 +332,8 @@ export default function SettingsPage() {
               >
                 <option value="">-- Выберите принтер --</option>
                 {cupsPrinters.map((printer) => (
-                  <option key={printer.name} value={printer.name}>
-                    {printer.name} {printer.online ? '(online)' : '(offline)'}
+                  <option key={printer} value={printer}>
+                    {printer}
                   </option>
                 ))}
               </select>

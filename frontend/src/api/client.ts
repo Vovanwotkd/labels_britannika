@@ -318,7 +318,7 @@ export const syncApi = {
 // ============================================================================
 
 export interface PrintersListResponse {
-  printers: PrinterInfo[]
+  printers: string[]  // Backend returns array of printer names
   count: number
 }
 
