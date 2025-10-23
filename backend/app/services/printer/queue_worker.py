@@ -176,9 +176,9 @@ class PrintQueueWorker:
                 raise ValueError(f"OrderItem {job.order_item_id} not found")
 
             # 3. Получаем данные блюда из dishes_db
-            dish = dishes_db.get_dish_by_rk_code(order_item.rkeeper_code)
+            dish = dishes_db.get_dish_by_rk_code(order_item.rk_code)
             if not dish:
-                raise ValueError(f"Dish with rk_code={order_item.rkeeper_code} not found in dishes DB")
+                raise ValueError(f"Dish with rk_code={order_item.rk_code} not found in dishes DB")
 
             # 4. Получаем шаблон
             template = db.query(Template).filter(Template.is_default == True).first()
