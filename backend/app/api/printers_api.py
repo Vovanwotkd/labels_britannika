@@ -50,8 +50,8 @@ async def get_cups_printers(
     """
     try:
         # Получаем список принтеров из CUPS
-        # host.docker.internal для доступа к хосту из контейнера
-        printers = CUPSPrinterClient.list_printers(cups_server="host.docker.internal")
+        # 172.17.0.1 - Docker gateway для доступа к хосту из контейнера
+        printers = CUPSPrinterClient.list_printers(cups_server="172.17.0.1")
 
         logger.info(f"📋 Получен список CUPS принтеров: {printers}")
 
@@ -78,7 +78,7 @@ async def get_printer_status(
     try:
         client = CUPSPrinterClient(
             printer_name=printer_name,
-            cups_server="host.docker.internal"
+            cups_server="172.17.0.1"
         )
 
         status = client.get_printer_status()

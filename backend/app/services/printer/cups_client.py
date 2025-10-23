@@ -23,11 +23,11 @@ class CUPSPrinterClient:
     - Гибкость (можно печатать PNG, PDF, текст)
     """
 
-    def __init__(self, printer_name: str, cups_server: str = "localhost"):
+    def __init__(self, printer_name: str, cups_server: str = "172.17.0.1"):
         """
         Args:
             printer_name: Имя принтера в CUPS (например "XPrinter")
-            cups_server: CUPS сервер (default "localhost" для хоста)
+            cups_server: CUPS сервер (default "172.17.0.1" - Docker gateway)
         """
         self.printer_name = printer_name
         self.cups_server = cups_server

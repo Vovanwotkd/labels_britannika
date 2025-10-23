@@ -209,7 +209,7 @@ class PrintQueueWorker:
             logger.info(f"✅ PNG сгенерирован: {len(png_bytes)} bytes ({len(png_bytes)/1024:.2f} KB)")
 
             # 7. Отправляем на печать через CUPS
-            cups_client = CUPSPrinterClient(printer_name, cups_server="host.docker.internal")
+            cups_client = CUPSPrinterClient(printer_name, cups_server="172.17.0.1")
             success = cups_client.print_image_data(
                 png_bytes,
                 filename=f"label_{job.id}.png",
