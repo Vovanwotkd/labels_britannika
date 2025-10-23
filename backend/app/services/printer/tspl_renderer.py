@@ -232,8 +232,8 @@ class TSPLRenderer:
         # Команда печати
         tspl_commands.append("PRINT 1")
 
-        # Объединяем команды
-        tspl_data = "\n".join(tspl_commands)
+        # Объединяем команды (с переносом строки в конце для завершения команды)
+        tspl_data = "\n".join(tspl_commands) + "\n"
 
         logger.debug(f"Generated TSPL for {dish_data['name']}: {len(tspl_data)} bytes")
 
@@ -403,8 +403,8 @@ class TSPLRenderer:
         # ====================================================================
         tspl_commands.append("PRINT 1")  # Напечатать 1 экземпляр
 
-        # Объединяем все команды
-        tspl_data = "\n".join(tspl_commands)
+        # Объединяем все команды (с переносом строки в конце для завершения команды)
+        tspl_data = "\n".join(tspl_commands) + "\n"
 
         logger.debug(f"Generated TSPL (legacy) for {dish_data['name']}: {len(tspl_data)} bytes")
 
