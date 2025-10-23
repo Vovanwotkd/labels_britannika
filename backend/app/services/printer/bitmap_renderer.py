@@ -94,9 +94,9 @@ class BitmapRenderer:
                     if pixel_x < width:
                         # Получаем пиксель (0=черный, 1=белый в mode '1')
                         pixel = img.getpixel((pixel_x, row))
-                        # TSPL: попробуем без инверсии (1=черный)
+                        # TSPL: попробуем LSB first вместо MSB first
                         if pixel == 1:
-                            byte_value |= (1 << (7 - bit_idx))
+                            byte_value |= (1 << bit_idx)
 
                 row_bytes.append(f"{byte_value:02X}")
 
