@@ -123,11 +123,23 @@ export default function OrdersBoard() {
   // Печать всего заказа
   const handlePrintAll = async (orderId: number) => {
     try {
-      // TODO: вызвать API для печати всего заказа
-      console.log('Print all labels for order:', orderId)
-      // await ordersApi.printOrder(orderId)
+      const order = await ordersApi.getById(orderId)
+
+      if (!order.items || order.items.length === 0) {
+        alert('В заказе нет блюд для печати')
+        return
+      }
+
+      // Печатаем каждое блюдо
+      for (const item of order.items) {
+        await ordersApi.reprint(item.id, item.quantity)
+      }
+
+      // Перезагружаем заказы для обновления статусов
+      await loadOrders()
     } catch (err) {
       console.error('Failed to print order:', err)
+      alert('Не удалось напечатать заказ')
     }
   }
 
@@ -146,9 +158,8 @@ export default function OrdersBoard() {
   // Печать отдельного блюда
   const handlePrintDish = async (dishId: number, quantity: number) => {
     try {
-      // TODO: Implement API call for printing single dish
-      console.log(`Printing dish ${dishId}, quantity: ${quantity}`)
-      await new Promise(resolve => setTimeout(resolve, 500)) // Simulate API call
+      await ordersApi.reprint(dishId, quantity)
+      // Успех - checkmark уже показывается в модалке
     } catch (err) {
       console.error('Failed to print dish:', err)
       alert('Не удалось напечатать блюдо')

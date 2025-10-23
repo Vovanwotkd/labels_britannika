@@ -106,6 +106,8 @@ export interface TemplateConfig {
   paper_width_mm: number
   paper_height_mm: number
   paper_gap_mm: number
+  shelf_life_hours?: number  // Срок годности (часы)
+  bitmap_width?: number  // Ширина BITMAP изображений для оптимизации (px), по умолчанию 280
   elements: TemplateElement[]
 }
 

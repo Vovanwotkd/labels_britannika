@@ -25,26 +25,17 @@ class TSPLRenderer:
         """
         Args:
             template_config: Конфигурация шаблона (из Template.config)
+                Поддерживает новый формат с elements[] из визуального редактора
         """
-        # Если config использует новый формат с elements, создаём fallback
-        if "elements" in template_config and not template_config.get("title"):
-            # Новый формат - создаём базовый старый формат для совместимости
-            self.config = {
-                "paper_width_mm": template_config.get("paper_width_mm", 58),
-                "paper_height_mm": template_config.get("paper_height_mm", 60),
-                "paper_gap_mm": template_config.get("paper_gap_mm", 2),
-                "shelf_life_hours": 6,
-                "title": {"font": "3", "x": 10, "y": 30},
-                "weight_calories": {"font": "2", "x": 10, "y": 60},
-                "bju": {"enabled": True, "font": "2", "x": 10, "y": 80},
-                "ingredients": {"enabled": True, "font": "2", "x": 10, "y": 100},
-                "dates": {"enabled": True, "font": "1", "x": 10, "y": 160}
-            }
-        else:
-            self.config = template_config
-
+        self.config = template_config
         self.dpi = 203  # PC-365B = 203 dpi
         self.mm_to_dots = 8  # 203 dpi ≈ 8 dots/mm
+
+        # Проверяем формат конфигурации
+        self.use_elements = "elements" in template_config
+
+        # Настройки оптимизации BITMAP (можно переопределить в config)
+        self.bitmap_width = template_config.get("bitmap_width", 280)  # оптимально для 58мм
 
     def render(self, dish_data: Dict[str, Any]) -> str:
         """
@@ -66,7 +57,199 @@ class TSPLRenderer:
         Returns:
             TSPL команды (строка)
         """
+        # Выбираем метод рендеринга в зависимости от формата конфигурации
+        if self.use_elements:
+            return self._render_with_elements(dish_data)
+        else:
+            return self._render_legacy(dish_data)
 
+    def _render_with_elements(self, dish_data: Dict[str, Any]) -> str:
+        """
+        Рендеринг с использованием elements[] из визуального редактора
+
+        Args:
+            dish_data: Данные блюда
+
+        Returns:
+            TSPL команды
+        """
+        # Параметры бумаги
+        width_mm = self.config.get("paper_width_mm", 58)
+        height_mm = self.config.get("paper_height_mm", 60)
+        gap_mm = self.config.get("paper_gap_mm", 2)
+
+        # Даты
+        from datetime import datetime, timedelta
+        now = datetime.now()
+        shelf_life_hours = self.config.get("shelf_life_hours", 6)
+        shelf_life = now + timedelta(hours=shelf_life_hours)
+
+        # Начинаем формировать TSPL
+        tspl_commands = []
+
+        # Заголовок
+        tspl_commands.append(f"SIZE {width_mm} mm, {height_mm} mm")
+        tspl_commands.append(f"GAP {gap_mm} mm, 0 mm")
+        tspl_commands.append("DIRECTION 1")
+        tspl_commands.append("CLS")
+
+        # Обрабатываем элементы из редактора
+        elements = self.config.get("elements", [])
+
+        for element in elements:
+            if not element.get("visible", True):
+                continue  # Пропускаем невидимые элементы
+
+            element_type = element.get("type")
+            position = element.get("position", {})
+            x_mm = position.get("x", 10)
+            y_mm = position.get("y", 10)
+
+            # Конвертируем мм в dots (203 dpi ≈ 8 dots/mm)
+            x = int(x_mm * self.mm_to_dots)
+            y = int(y_mm * self.mm_to_dots)
+
+            font_size = element.get("fontSize", 14)
+
+            # Генерируем BITMAP для каждого типа элемента
+            if element_type == "text":
+                # Текстовый блок (название, кастомный текст)
+                field_name = element.get("fieldName")
+                if field_name == "dish_name":
+                    text = dish_data.get("name", "")
+                else:
+                    text = element.get("content", "")
+
+                if text:
+                    bitmap_cmd = BitmapRenderer.text_to_bitmap_tspl(
+                        text=text,
+                        x=x, y=y,
+                        font_size=font_size,
+                        width=self.bitmap_width
+                    )
+                    tspl_commands.append(bitmap_cmd)
+
+            elif element_type == "weight":
+                # Вес
+                weight_g = dish_data.get("weight_g", 0)
+                calories = dish_data.get("calories", 0)
+                show_unit = element.get("showUnit", True)
+                unit = "г" if show_unit else ""
+
+                text = f"Вес: {weight_g}{unit}  Ккал: {calories}"
+                bitmap_cmd = BitmapRenderer.text_to_bitmap_tspl(
+                    text=text,
+                    x=x, y=y,
+                    font_size=font_size,
+                    width=self.bitmap_width
+                )
+                tspl_commands.append(bitmap_cmd)
+
+            elif element_type == "bju":
+                # БЖУ
+                protein = dish_data.get("protein", 0)
+                fat = dish_data.get("fat", 0)
+                carbs = dish_data.get("carbs", 0)
+
+                parts = []
+                if element.get("showProteins", True):
+                    parts.append(f"Б:{protein:.0f}г")
+                if element.get("showFats", True):
+                    parts.append(f"Ж:{fat:.0f}г")
+                if element.get("showCarbs", True):
+                    parts.append(f"У:{carbs:.0f}г")
+
+                text = " ".join(parts)
+                bitmap_cmd = BitmapRenderer.text_to_bitmap_tspl(
+                    text=text,
+                    x=x, y=y,
+                    font_size=font_size,
+                    width=self.bitmap_width
+                )
+                tspl_commands.append(bitmap_cmd)
+
+            elif element_type == "composition":
+                # Состав
+                ingredients = dish_data.get("ingredients", [])
+                max_lines = element.get("maxLines", 3)
+
+                if ingredients:
+                    ingredients_text = ", ".join(ingredients[:max_lines])
+
+                    # Ограничиваем длину
+                    max_length = 50
+                    if len(ingredients_text) > max_length:
+                        ingredients_text = ingredients_text[:max_length-3] + "..."
+
+                    text = f"Состав: {ingredients_text}"
+                    bitmap_cmd = BitmapRenderer.text_to_bitmap_tspl(
+                        text=text,
+                        x=x, y=y,
+                        font_size=font_size,
+                        width=self.bitmap_width
+                    )
+                    tspl_commands.append(bitmap_cmd)
+
+            elif element_type == "datetime":
+                # Дата изготовления
+                label = element.get("label", "Изготовлено:")
+                date_format = element.get("format", "datetime")
+
+                if date_format == "datetime":
+                    date_str = now.strftime("%d.%m %H:%M")
+                elif date_format == "date":
+                    date_str = now.strftime("%d.%m.%Y")
+                elif date_format == "time":
+                    date_str = now.strftime("%H:%M")
+                else:
+                    date_str = now.strftime("%d.%m %H:%M")
+
+                text = f"{label} {date_str}"
+                bitmap_cmd = BitmapRenderer.text_to_bitmap_tspl(
+                    text=text,
+                    x=x, y=y,
+                    font_size=font_size,
+                    width=self.bitmap_width
+                )
+                tspl_commands.append(bitmap_cmd)
+
+            elif element_type == "shelf_life":
+                # Срок годности
+                label = element.get("label", "Годен до:")
+                hours = element.get("hours", shelf_life_hours)
+                expiry = now + timedelta(hours=hours)
+
+                date_str = expiry.strftime("%d.%m %H:%M")
+                text = f"{label} {date_str}"
+                bitmap_cmd = BitmapRenderer.text_to_bitmap_tspl(
+                    text=text,
+                    x=x, y=y,
+                    font_size=font_size,
+                    width=self.bitmap_width
+                )
+                tspl_commands.append(bitmap_cmd)
+
+        # Команда печати
+        tspl_commands.append("PRINT 1")
+
+        # Объединяем команды
+        tspl_data = "\n".join(tspl_commands)
+
+        logger.debug(f"Generated TSPL for {dish_data['name']}: {len(tspl_data)} bytes")
+
+        return tspl_data
+
+    def _render_legacy(self, dish_data: Dict[str, Any]) -> str:
+        """
+        Старый метод рендеринга (для обратной совместимости)
+        Используется если config не содержит elements[]
+
+        Args:
+            dish_data: Данные блюда
+
+        Returns:
+            TSPL команды
+        """
         # Параметры из конфигурации
         width_mm = self.config.get("paper_width_mm", 60)
         height_mm = self.config.get("paper_height_mm", 60)
@@ -110,13 +293,13 @@ class TSPLRenderer:
         if len(title_text) > max_title_length:
             title_text = title_text[:max_title_length-3] + "..."
 
-        # Рендерим в bitmap для поддержки кириллицы
+        # Рендерим в bitmap для поддержки кириллицы (ОПТИМИЗИРОВАНО)
         title_bitmap = BitmapRenderer.text_to_bitmap_tspl(
             text=title_text,
             x=title_x,
             y=title_y,
-            font_size=24,  # Крупный шрифт для заголовка
-            width=400
+            font_size=20,  # Оптимизировано: было 24
+            width=self.bitmap_width  # Оптимизировано: было 400
         )
         tspl_commands.append(title_bitmap)
 
@@ -132,8 +315,8 @@ class TSPLRenderer:
             text=wc_text,
             x=wc_x,
             y=wc_y,
-            font_size=16,
-            width=400
+            font_size=14,  # Оптимизировано: было 16
+            width=self.bitmap_width
         )
         tspl_commands.append(wc_bitmap)
 
@@ -150,8 +333,8 @@ class TSPLRenderer:
                 text=bju_text,
                 x=bju_x,
                 y=bju_y,
-                font_size=16,
-                width=400
+                font_size=14,  # Оптимизировано: было 16
+                width=self.bitmap_width
             )
             tspl_commands.append(bju_bitmap)
 
@@ -176,8 +359,8 @@ class TSPLRenderer:
                 text=f"Состав: {ingredients_text}",
                 x=ing_x,
                 y=ing_y,
-                font_size=14,
-                width=420
+                font_size=12,  # Оптимизировано: было 14
+                width=self.bitmap_width
             )
             tspl_commands.append(ing_bitmap)
 
@@ -195,8 +378,8 @@ class TSPLRenderer:
             text=f"Изготовлено: {date_str}",
             x=dt_x,
             y=dt_y,
-            font_size=16,
-            width=400
+            font_size=12,  # Оптимизировано: было 16
+            width=self.bitmap_width
         )
         tspl_commands.append(date_bitmap)
 
@@ -204,38 +387,16 @@ class TSPLRenderer:
             text=f"Годен до: {shelf_str}",
             x=dt_x,
             y=dt_y + 20,
-            font_size=16,
-            width=400
+            font_size=12,  # Оптимизировано: было 16
+            width=self.bitmap_width
         )
         tspl_commands.append(shelf_bitmap)
 
         # ====================================================================
-        # ШТРИХ-КОД
+        # ШТРИХ-КОД И QR-КОД - УДАЛЕНЫ (оптимизация размера)
         # ====================================================================
-        bc_config = self.config.get("barcode", {})
-        bc_type = bc_config.get("type", "128")  # CODE128
-        bc_x = bc_config.get("x", 10)
-        bc_y = bc_config.get("y", 180)
-        bc_height = bc_config.get("height", 50)
-        bc_narrow = bc_config.get("narrow_bar", 2)
-
-        tspl_commands.append(
-            f'BARCODE {bc_x},{bc_y},"{bc_type}",{bc_height},1,0,{bc_narrow},{bc_narrow},"{dish_data["rk_code"]}"'
-        )
-
-        # ====================================================================
-        # QR-КОД (если включен)
-        # ====================================================================
-        qr_config = self.config.get("qr", {})
-        if qr_config.get("enabled", False):
-            qr_x = qr_config.get("x", 200)
-            qr_y = qr_config.get("y", 170)
-            qr_size = qr_config.get("size", 4)
-
-            # QR код содержит RK код блюда
-            tspl_commands.append(
-                f'QRCODE {qr_x},{qr_y},L,{qr_size},A,0,"{dish_data["rk_code"]}"'
-            )
+        # Штрих-код и QR-код убраны для экономии места на этикетке
+        # и уменьшения размера TSPL данных
 
         # ====================================================================
         # ПЕЧАТЬ
@@ -245,7 +406,7 @@ class TSPLRenderer:
         # Объединяем все команды
         tspl_data = "\n".join(tspl_commands)
 
-        logger.debug(f"Generated TSPL for {dish_data['name']} ({dish_data['rk_code']})")
+        logger.debug(f"Generated TSPL (legacy) for {dish_data['name']}: {len(tspl_data)} bytes")
 
         return tspl_data
 

@@ -49,10 +49,11 @@ class BitmapRenderer:
             # Рисуем текст
             draw.text((0, 0), text, font=font, fill=0)  # 0 = черный текст
 
-            # Обрезаем пустое пространство справа
+            # Обрезаем пустое пространство со всех сторон (включая сверху/снизу)
             bbox = img.getbbox()
             if bbox:
-                img = img.crop((0, 0, bbox[2], img_height))
+                # bbox = (left, top, right, bottom)
+                img = img.crop(bbox)  # Crop со всех сторон для оптимизации
 
             # Конвертируем в TSPL bitmap формат
             tspl_bitmap = BitmapRenderer._image_to_tspl_bitmap(img, x, y)
