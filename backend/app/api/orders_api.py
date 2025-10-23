@@ -307,6 +307,7 @@ async def reprint_item(
         })
 
         job = PrintJob(
+            order_id=order_item.order_id,
             order_item_id=order_item.id,
             tspl_data=tspl,
             status="QUEUED",
@@ -333,6 +334,7 @@ async def reprint_item(
                 })
 
                 job = PrintJob(
+                    order_id=order_item.order_id,
                     order_item_id=order_item.id,
                     tspl_data=tspl,
                     status="QUEUED",
