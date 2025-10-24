@@ -387,17 +387,17 @@ export default function PropertiesPanel({
               max="72"
             />
           </div>
-          {hasFontWeight && 'fontWeight' in element && (
+          {hasFontWeight && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Жирность: {element.fontWeight}
+                Жирность: {'fontWeight' in element ? element.fontWeight : 400}
               </label>
               <input
                 type="range"
                 min="100"
                 max="900"
                 step="10"
-                value={element.fontWeight}
+                value={'fontWeight' in element ? element.fontWeight : 400}
                 onChange={(e) =>
                   onUpdate({ fontWeight: parseInt(e.target.value) })
                 }
