@@ -27,6 +27,7 @@ export default function PropertiesPanel({
   }
 
   const hasFont =
+    element.type === 'dish_name' ||
     element.type === 'text' ||
     element.type === 'composition' ||
     element.type === 'bju' ||
@@ -34,11 +35,20 @@ export default function PropertiesPanel({
     element.type === 'datetime' ||
     element.type === 'shelf_life'
 
+  const hasFontWeight =
+    element.type === 'dish_name' ||
+    element.type === 'text'
+
+  const hasAlign =
+    element.type === 'dish_name' ||
+    element.type === 'text'
+
   return (
     <div className="p-4 space-y-4">
       <div className="flex justify-between items-center pb-2 border-b">
         <h3 className="font-semibold text-gray-900">
           {element.type === 'logo' && 'Логотип'}
+          {element.type === 'dish_name' && 'Название блюда'}
           {element.type === 'text' && 'Текстовый блок'}
           {element.type === 'composition' && 'Состав'}
           {element.type === 'bju' && 'БЖУ'}
@@ -164,6 +174,26 @@ export default function PropertiesPanel({
               className="mt-2 max-w-full h-20 object-contain border"
             />
           )}
+        </div>
+      )}
+
+      {/* DishName specific */}
+      {element.type === 'dish_name' && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Выравнивание
+          </label>
+          <select
+            value={element.align}
+            onChange={(e) =>
+              onUpdate({ align: e.target.value as 'left' | 'center' | 'right' })
+            }
+            className="block w-full px-2 py-1 text-sm border border-gray-300 rounded"
+          >
+            <option value="left">Слева</option>
+            <option value="center">По центру</option>
+            <option value="right">Справа</option>
+          </select>
         </div>
       )}
 
@@ -356,6 +386,23 @@ export default function PropertiesPanel({
               max="72"
             />
           </div>
+          {hasFontWeight && 'fontWeight' in element && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Жирность
+              </label>
+              <select
+                value={element.fontWeight}
+                onChange={(e) =>
+                  onUpdate({ fontWeight: e.target.value as 'normal' | 'bold' })
+                }
+                className="block w-full px-2 py-1 text-sm border border-gray-300 rounded"
+              >
+                <option value="normal">Обычный</option>
+                <option value="bold">Жирный</option>
+              </select>
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Цвет

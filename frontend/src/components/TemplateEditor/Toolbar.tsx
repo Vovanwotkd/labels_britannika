@@ -11,6 +11,7 @@ interface ToolbarProps {
 
 const tools = [
   { type: 'logo' as ElementType, icon: '🖼️', label: 'Логотип' },
+  { type: 'dish_name' as ElementType, icon: '🍽️', label: 'Название блюда' },
   { type: 'text' as ElementType, icon: '📝', label: 'Текст' },
   { type: 'composition' as ElementType, icon: '📋', label: 'Состав' },
   { type: 'bju' as ElementType, icon: '🥗', label: 'БЖУ' },

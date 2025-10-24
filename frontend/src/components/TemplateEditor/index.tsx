@@ -14,6 +14,7 @@ import {
   Position,
   TemplateConfig,
   LogoElement,
+  DishNameElement,
   TextElement,
   CompositionElement,
   BJUElement,
@@ -64,6 +65,19 @@ export default function TemplateEditor({
     switch (type) {
       case 'logo':
         return { id, type: 'logo', position, size, visible } as LogoElement
+      case 'dish_name':
+        return {
+          id,
+          type: 'dish_name',
+          position,
+          size,
+          visible,
+          fontSize: 32,
+          fontFamily: 'Arial',
+          fontWeight: 'bold',
+          color: '#000000',
+          align: 'left',
+        } as DishNameElement
       case 'text':
         return {
           id,

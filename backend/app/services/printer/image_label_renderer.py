@@ -98,15 +98,25 @@ class ImageLabelRenderer:
             y_px = int(position.get("y", 10) * self.DPI / 25.4)
 
             font_size = element.get("fontSize", 14)
+            font_weight = element.get("fontWeight", "normal")
 
-            # Загружаем шрифт
+            # Загружаем шрифт с учётом жирности
             try:
-                font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
+                if font_weight == "bold":
+                    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
+                else:
+                    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
             except:
                 font = ImageFont.load_default()
 
             # Рендерим элемент в зависимости от типа
-            if element_type == "text":
+            if element_type == "dish_name":
+                # Название блюда
+                text = dish_data.get("name", "")
+                if text:
+                    draw.text((x_px, y_px), text, font=font, fill='black')
+
+            elif element_type == "text":
                 field_name = element.get("fieldName")
                 if field_name == "dish_name":
                     text = dish_data.get("name", "")

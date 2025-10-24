@@ -128,6 +128,10 @@ export default function Canvas({
         content = element.imageUrl ? '🖼️' : 'Логотип'
         bgColor = '#e3f2fd'
         break
+      case 'dish_name':
+        content = 'Борщ с говядиной и сметаной'
+        bgColor = '#fff8e1'
+        break
       case 'text':
         content = element.content || element.fieldName || 'Текст'
         bgColor = '#fff3e0'

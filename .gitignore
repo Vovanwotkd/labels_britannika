@@ -127,3 +127,4 @@ XML (2)/
 # Системные файлы Windows
 *.lnk
 $RECYCLE.BIN/
+log.txt

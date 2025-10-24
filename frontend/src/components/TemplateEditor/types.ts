@@ -5,6 +5,7 @@
 
 export type ElementType =
   | 'logo'
+  | 'dish_name'
   | 'text'
   | 'composition'
   | 'bju'
@@ -47,6 +48,15 @@ export interface TextElement extends BaseElement {
   color: string
   align: 'left' | 'center' | 'right'
   fieldName?: string // для динамических полей (dish_name, weight_g и т.д.)
+}
+
+export interface DishNameElement extends BaseElement {
+  type: 'dish_name'
+  fontSize: number
+  fontFamily: FontFamily
+  fontWeight: 'normal' | 'bold'
+  color: string
+  align: 'left' | 'center' | 'right'
 }
 
 export interface CompositionElement extends BaseElement {
@@ -95,6 +105,7 @@ export interface ShelfLifeElement extends BaseElement {
 
 export type TemplateElement =
   | LogoElement
+  | DishNameElement
   | TextElement
   | CompositionElement
   | BJUElement
