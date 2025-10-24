@@ -151,6 +151,7 @@ export interface SystemInfo {
     ip: string
     port: number
     name: string  // CUPS printer name
+    cups_darkness: number  // CUPS darkness level (0-15)
   }
   label: {
     width: number

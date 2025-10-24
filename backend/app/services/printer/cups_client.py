@@ -23,14 +23,16 @@ class CUPSPrinterClient:
     - Гибкость (можно печатать PNG, PDF, текст)
     """
 
-    def __init__(self, printer_name: str, cups_server: str = "172.17.0.1"):
+    def __init__(self, printer_name: str, cups_server: str = "172.17.0.1", darkness: int = 10):
         """
         Args:
             printer_name: Имя принтера в CUPS (например "XPrinter")
             cups_server: CUPS сервер (default "172.17.0.1" - Docker gateway)
+            darkness: Яркость печати от 0 до 15 (default 10)
         """
         self.printer_name = printer_name
         self.cups_server = cups_server
+        self.darkness = max(0, min(15, darkness))  # Ограничиваем 0-15
 
     def print_file(self, file_path: str, copies: int = 1) -> bool:
         """
@@ -56,10 +58,11 @@ class CUPSPrinterClient:
                 '-d', self.printer_name,  # Имя принтера
                 '-n', str(copies),        # Количество копий
                 '-o', 'media=Custom.58x60mm',  # Размер этикетки
+                '-o', f'Darkness={self.darkness}',  # Яркость печати
                 file_path
             ]
 
-            logger.info(f"📄 Отправка на печать: {file_path} → {self.printer_name} (x{copies})")
+            logger.info(f"📄 Отправка на печать: {file_path} → {self.printer_name} (x{copies}, darkness={self.darkness})")
 
             # Выполняем команду
             result = subprocess.run(

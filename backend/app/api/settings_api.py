@@ -368,6 +368,7 @@ async def get_system_info(
             "ip": get_setting_value("printer_ip", config.PRINTER_IP),
             "port": int(get_setting_value("printer_port", str(config.PRINTER_PORT))),
             "name": get_setting_value("printer_name", ""),
+            "cups_darkness": int(get_setting_value("cups_darkness", "10")),
         },
         "label": {
             "width": int(get_setting_value("label_width", str(config.DEFAULT_PAPER_WIDTH))),

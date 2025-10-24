@@ -27,6 +27,7 @@ export default function SettingsPage() {
   const [printerIp, setPrinterIp] = useState('')
   const [printerPort, setPrinterPort] = useState('')
   const [printerName, setPrinterName] = useState('')
+  const [cupsDarkness, setCupsDarkness] = useState('10')
   const [cupsPrinters, setCupsPrinters] = useState<string[]>([])
   const [loadingPrinters, setLoadingPrinters] = useState(false)
   const [sh5Url, setSh5Url] = useState('')
@@ -55,6 +56,7 @@ export default function SettingsPage() {
       setPrinterIp(data.printer.ip)
       setPrinterPort(data.printer.port.toString())
       setPrinterName(data.printer.name || '')
+      setCupsDarkness(data.printer.cups_darkness?.toString() || '10')
       setSh5Url(data.storehouse.url)
       setSh5User(data.storehouse.user)
       setSh5Pass(data.storehouse.pass)
@@ -109,6 +111,7 @@ export default function SettingsPage() {
         { key: 'printer_ip', value: printerIp },
         { key: 'printer_port', value: printerPort },
         { key: 'printer_name', value: printerName },
+        { key: 'cups_darkness', value: cupsDarkness },
         { key: 'sh5_url', value: sh5Url },
         { key: 'sh5_user', value: sh5User },
         { key: 'sh5_pass', value: sh5Pass },
@@ -342,6 +345,23 @@ export default function SettingsPage() {
                   Принтеры не найдены. Убедитесь, что CUPS настроен на сервере.
                 </p>
               )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Яркость печати (Darkness)
+              </label>
+              <input
+                type="number"
+                value={cupsDarkness}
+                onChange={(e) => setCupsDarkness(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                min="0"
+                max="15"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Уровень яркости печати от 0 (светлый) до 15 (тёмный). Рекомендуется: 10-12
+              </p>
             </div>
 
             <div className="bg-blue-50 border border-blue-200 rounded-md p-3">

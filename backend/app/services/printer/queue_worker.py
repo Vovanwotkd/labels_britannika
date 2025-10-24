@@ -162,13 +162,18 @@ class PrintQueueWorker:
             from app.services.printer.image_label_renderer import ImageLabelRenderer
             from app.core.database import dishes_db
 
-            # 1. Получаем имя CUPS принтера из настроек
+            # 1. Получаем настройки CUPS принтера
             printer_name_setting = db.query(Setting).filter(Setting.key == "printer_name").first()
             if not printer_name_setting or not printer_name_setting.value:
                 raise ValueError("CUPS printer name not configured in settings")
 
             printer_name = printer_name_setting.value
-            logger.info(f"📝 Используем CUPS принтер: {printer_name}")
+
+            # Получаем настройку darkness (по умолчанию 10)
+            cups_darkness_setting = db.query(Setting).filter(Setting.key == "cups_darkness").first()
+            cups_darkness = int(cups_darkness_setting.value) if cups_darkness_setting and cups_darkness_setting.value else 10
+
+            logger.info(f"📝 Используем CUPS принтер: {printer_name}, Darkness: {cups_darkness}")
 
             # 2. Получаем OrderItem для доступа к данным заказа
             order_item = db.query(OrderItem).filter(OrderItem.id == job.order_item_id).first()
@@ -206,7 +211,11 @@ class PrintQueueWorker:
             logger.info(f"✅ PNG сгенерирован: {len(png_bytes)} bytes ({len(png_bytes)/1024:.2f} KB)")
 
             # 7. Отправляем на печать через CUPS
-            cups_client = CUPSPrinterClient(printer_name, cups_server="172.17.0.1")
+            cups_client = CUPSPrinterClient(
+                printer_name,
+                cups_server="172.17.0.1",
+                darkness=cups_darkness
+            )
             success = cups_client.print_image_data(
                 png_bytes,
                 filename=f"label_{job.id}.png",
