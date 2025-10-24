@@ -311,6 +311,23 @@ class ImageLabelRenderer:
         img.save(output, format='PNG', dpi=(self.DPI, self.DPI))
         png_bytes = output.getvalue()
 
+        # DEBUG: Сохраняем PNG на диск для отладки
+        try:
+            import os
+            from datetime import datetime
+            debug_dir = "/app/data/debug_labels"
+            os.makedirs(debug_dir, exist_ok=True)
+
+            # Имя файла с timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            dish_name_safe = dish_data.get('name', 'unknown')[:30].replace('/', '_').replace(' ', '_')
+            debug_path = f"{debug_dir}/label_{timestamp}_{dish_name_safe}.png"
+
+            img.save(debug_path, format='PNG', dpi=(self.DPI, self.DPI))
+            logger.info(f"🖼️  DEBUG: Saved PNG to {debug_path}")
+        except Exception as e:
+            logger.warning(f"Failed to save debug PNG: {e}")
+
         logger.debug(f"Generated PNG label for {dish_data['name']}: {len(png_bytes)} bytes")
 
         return png_bytes
