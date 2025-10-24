@@ -7,6 +7,8 @@ from typing import Dict, Any
 from datetime import datetime, timedelta
 import io
 import logging
+import base64
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +112,47 @@ class ImageLabelRenderer:
                 font = ImageFont.load_default()
 
             # Рендерим элемент в зависимости от типа
-            if element_type == "dish_name":
+            if element_type == "logo":
+                # Логотип (изображение в Base64)
+                image_data = element.get("imageData")
+                if image_data:
+                    try:
+                        # Удаляем data:image/...;base64, префикс если есть
+                        if ',' in image_data:
+                            image_data = image_data.split(',', 1)[1]
+
+                        # Декодируем Base64
+                        logo_bytes = base64.b64decode(image_data)
+                        logo_img = Image.open(io.BytesIO(logo_bytes))
+
+                        # Конвертируем в RGB если нужно (для PNG с прозрачностью)
+                        if logo_img.mode in ('RGBA', 'LA', 'P'):
+                            # Создаём белый фон
+                            background = Image.new('RGB', logo_img.size, 'white')
+                            if logo_img.mode == 'P':
+                                logo_img = logo_img.convert('RGBA')
+                            background.paste(logo_img, mask=logo_img.split()[-1] if logo_img.mode == 'RGBA' else None)
+                            logo_img = background
+
+                        # Получаем размеры элемента из конфига (в мм)
+                        size = element.get("size", {})
+                        width_mm = size.get("width", 20)
+                        height_mm = size.get("height", 20)
+
+                        # Конвертируем мм в пиксели
+                        width_px = int(width_mm * self.DPI / 25.4)
+                        height_px = int(height_mm * self.DPI / 25.4)
+
+                        # Изменяем размер логотипа
+                        logo_img = logo_img.resize((width_px, height_px), Image.LANCZOS)
+
+                        # Вставляем логотип на этикетку
+                        img.paste(logo_img, (x_px, y_px))
+
+                    except Exception as e:
+                        logger.error(f"Ошибка загрузки логотипа: {e}")
+
+            elif element_type == "dish_name":
                 # Название блюда
                 text = dish_data.get("name", "")
                 if text:
