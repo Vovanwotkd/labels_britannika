@@ -74,7 +74,7 @@ export default function TemplateEditor({
           visible,
           fontSize: 32,
           fontFamily: 'Arial',
-          fontWeight: 'bold',
+          fontWeight: 700,
           color: '#000000',
           align: 'left',
         } as DishNameElement
@@ -88,7 +88,7 @@ export default function TemplateEditor({
           content: 'Текст',
           fontSize: 14,
           fontFamily: 'Arial',
-          fontWeight: 'normal',
+          fontWeight: 400,
           color: '#000000',
           align: 'left',
         } as TextElement
@@ -101,7 +101,7 @@ export default function TemplateEditor({
           visible,
           fontSize: 10,
           fontFamily: 'Arial',
-          fontWeight: 'normal',
+          fontWeight: 400,
           color: '#000000',
           maxLines: 3,
         } as CompositionElement
@@ -114,7 +114,7 @@ export default function TemplateEditor({
           visible,
           fontSize: 10,
           fontFamily: 'Arial',
-          fontWeight: 'normal',
+          fontWeight: 400,
           color: '#000000',
           showProteins: true,
           showFats: true,
@@ -130,7 +130,7 @@ export default function TemplateEditor({
           visible,
           fontSize: 12,
           fontFamily: 'Arial',
-          fontWeight: 'normal',
+          fontWeight: 400,
           color: '#000000',
           showUnit: true,
         } as WeightElement
@@ -143,7 +143,7 @@ export default function TemplateEditor({
           visible,
           fontSize: 10,
           fontFamily: 'Arial',
-          fontWeight: 'normal',
+          fontWeight: 400,
           color: '#000000',
           format: 'datetime',
           label: 'Дата производства:',
@@ -157,7 +157,7 @@ export default function TemplateEditor({
           visible,
           fontSize: 10,
           fontFamily: 'Arial',
-          fontWeight: 'normal',
+          fontWeight: 400,
           color: '#000000',
           hours: 6,
         } as ShelfLifeElement
@@ -171,7 +171,7 @@ export default function TemplateEditor({
           content: '',
           fontSize: 12,
           fontFamily: 'Arial',
-          fontWeight: 'normal',
+          fontWeight: 400,
           color: '#000000',
           align: 'left',
         } as TextElement

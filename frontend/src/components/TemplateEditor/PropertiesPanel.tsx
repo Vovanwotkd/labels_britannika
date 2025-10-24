@@ -390,18 +390,25 @@ export default function PropertiesPanel({
           {hasFontWeight && 'fontWeight' in element && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Жирность
+                Жирность: {element.fontWeight}
               </label>
-              <select
+              <input
+                type="range"
+                min="100"
+                max="900"
+                step="100"
                 value={element.fontWeight}
                 onChange={(e) =>
-                  onUpdate({ fontWeight: e.target.value as 'normal' | 'bold' })
+                  onUpdate({ fontWeight: parseInt(e.target.value) as 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900 })
                 }
-                className="block w-full px-2 py-1 text-sm border border-gray-300 rounded"
-              >
-                <option value="normal">Обычный</option>
-                <option value="bold">Жирный</option>
-              </select>
+                className="block w-full"
+              />
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>100 (тонкий)</span>
+                <span>400 (норма)</span>
+                <span>700 (жирный)</span>
+                <span>900 (очень жирный)</span>
+              </div>
             </div>
           )}
           <div>

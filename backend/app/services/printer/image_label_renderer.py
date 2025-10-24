@@ -43,6 +43,48 @@ class ImageLabelRenderer:
         self.width_px = int(self.width_mm * self.DPI / 25.4)   # 58mm ≈ 460px
         self.height_px = int(self.height_mm * self.DPI / 25.4)  # 60mm ≈ 472px
 
+    def _get_font_file(self, font_weight: int) -> str:
+        """
+        Получить путь к файлу шрифта на основе fontWeight
+
+        Args:
+            font_weight: Вес шрифта (100-900)
+
+        Returns:
+            Путь к файлу TTF шрифта
+        """
+        # Нормализуем fontWeight (на случай строк или других значений)
+        try:
+            weight = int(font_weight)
+        except (ValueError, TypeError):
+            weight = 400  # Default to Regular
+
+        # Маппинг fontWeight на файлы Roboto шрифтов
+        font_map = {
+            100: "/usr/share/fonts/truetype/roboto/Roboto-Thin.ttf",
+            200: "/usr/share/fonts/truetype/roboto/Roboto-Light.ttf",
+            300: "/usr/share/fonts/truetype/roboto/Roboto-Light.ttf",
+            400: "/usr/share/fonts/truetype/roboto/Roboto-Regular.ttf",
+            500: "/usr/share/fonts/truetype/roboto/Roboto-Medium.ttf",
+            600: "/usr/share/fonts/truetype/roboto/Roboto-Medium.ttf",
+            700: "/usr/share/fonts/truetype/roboto/Roboto-Bold.ttf",
+            800: "/usr/share/fonts/truetype/roboto/Roboto-Black.ttf",
+            900: "/usr/share/fonts/truetype/roboto/Roboto-Black.ttf",
+        }
+
+        # Получаем путь или fallback на Regular
+        font_path = font_map.get(weight, "/usr/share/fonts/truetype/roboto/Roboto-Regular.ttf")
+
+        # Fallback на DejaVu если Roboto не найден
+        if not os.path.exists(font_path):
+            logger.warning(f"Roboto шрифт не найден: {font_path}, используем DejaVu")
+            if weight >= 700:
+                return "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+            else:
+                return "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+
+        return font_path
+
     def _wrap_text(self, text: str, font: ImageFont.FreeTypeFont, max_width_px: int) -> list:
         """
         Разбивает текст на строки по словам, чтобы уместиться в max_width_px
@@ -143,15 +185,14 @@ class ImageLabelRenderer:
             y_px = int(position.get("y", 10) * self.DPI / 25.4)
 
             font_size = element.get("fontSize", 14)
-            font_weight = element.get("fontWeight", "normal")
+            font_weight = element.get("fontWeight", 400)
 
-            # Загружаем шрифт с учётом жирности
+            # Загружаем шрифт с учётом жирности (100-900)
             try:
-                if font_weight == "bold":
-                    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
-                else:
-                    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
-            except:
+                font_file = self._get_font_file(font_weight)
+                font = ImageFont.truetype(font_file, font_size)
+            except Exception as e:
+                logger.warning(f"Не удалось загрузить шрифт {font_file}: {e}, используем default")
                 font = ImageFont.load_default()
 
             # Рендерим элемент в зависимости от типа
