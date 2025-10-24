@@ -101,6 +101,7 @@ export default function TemplateEditor({
           visible,
           fontSize: 10,
           fontFamily: 'Arial',
+          fontWeight: 'normal',
           color: '#000000',
           maxLines: 3,
         } as CompositionElement
@@ -113,6 +114,7 @@ export default function TemplateEditor({
           visible,
           fontSize: 10,
           fontFamily: 'Arial',
+          fontWeight: 'normal',
           color: '#000000',
           showProteins: true,
           showFats: true,
@@ -128,6 +130,7 @@ export default function TemplateEditor({
           visible,
           fontSize: 12,
           fontFamily: 'Arial',
+          fontWeight: 'normal',
           color: '#000000',
           showUnit: true,
         } as WeightElement
@@ -140,6 +143,7 @@ export default function TemplateEditor({
           visible,
           fontSize: 10,
           fontFamily: 'Arial',
+          fontWeight: 'normal',
           color: '#000000',
           format: 'datetime',
           label: 'Дата производства:',
@@ -153,6 +157,7 @@ export default function TemplateEditor({
           visible,
           fontSize: 10,
           fontFamily: 'Arial',
+          fontWeight: 'normal',
           color: '#000000',
           hours: 6,
         } as ShelfLifeElement

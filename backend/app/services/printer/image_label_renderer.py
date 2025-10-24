@@ -42,6 +42,48 @@ class ImageLabelRenderer:
         self.width_px = int(self.width_mm * self.DPI / 25.4)   # 58mm ≈ 460px
         self.height_px = int(self.height_mm * self.DPI / 25.4)  # 60mm ≈ 472px
 
+    def _wrap_text(self, text: str, font: ImageFont.FreeTypeFont, max_width_px: int) -> list:
+        """
+        Разбивает текст на строки по словам, чтобы уместиться в max_width_px
+
+        Args:
+            text: Исходный текст
+            font: Шрифт для измерения размера
+            max_width_px: Максимальная ширина строки в пикселях
+
+        Returns:
+            Список строк
+        """
+        words = text.split(' ')
+        lines = []
+        current_line = []
+
+        for word in words:
+            # Проверяем длину текущей строки + новое слово
+            test_line = ' '.join(current_line + [word])
+            bbox = font.getbbox(test_line)
+            width = bbox[2] - bbox[0]
+
+            if width <= max_width_px:
+                # Слово влезает
+                current_line.append(word)
+            else:
+                # Слово не влезает
+                if current_line:
+                    # Сохраняем текущую строку
+                    lines.append(' '.join(current_line))
+                    current_line = [word]
+                else:
+                    # Даже одно слово не влезает - добавляем как есть
+                    lines.append(word)
+                    current_line = []
+
+        # Добавляем последнюю строку
+        if current_line:
+            lines.append(' '.join(current_line))
+
+        return lines
+
     def render(self, dish_data: Dict[str, Any]) -> bytes:
         """
         Генерирует PNG этикетку
@@ -153,12 +195,24 @@ class ImageLabelRenderer:
                         logger.error(f"Ошибка загрузки логотипа: {e}")
 
             elif element_type == "dish_name":
-                # Название блюда
+                # Название блюда с переносом строк
                 text = dish_data.get("name", "")
                 if text:
-                    draw.text((x_px, y_px), text, font=font, fill='black')
+                    # Получаем ширину элемента
+                    size = element.get("size", {})
+                    width_mm = size.get("width", 50)
+                    max_width_px = int(width_mm * self.DPI / 25.4)
+
+                    # Разбиваем текст на строки
+                    lines = self._wrap_text(text, font, max_width_px)
+
+                    # Рисуем каждую строку
+                    line_height = font.getbbox("Аy")[3] - font.getbbox("Аy")[1]
+                    for i, line in enumerate(lines):
+                        draw.text((x_px, y_px + i * line_height), line, font=font, fill='black')
 
             elif element_type == "text":
+                # Текстовый элемент с переносом строк
                 field_name = element.get("fieldName")
                 if field_name == "dish_name":
                     text = dish_data.get("name", "")
@@ -166,7 +220,18 @@ class ImageLabelRenderer:
                     text = element.get("content", "")
 
                 if text:
-                    draw.text((x_px, y_px), text, font=font, fill='black')
+                    # Получаем ширину элемента
+                    size = element.get("size", {})
+                    width_mm = size.get("width", 50)
+                    max_width_px = int(width_mm * self.DPI / 25.4)
+
+                    # Разбиваем текст на строки
+                    lines = self._wrap_text(text, font, max_width_px)
+
+                    # Рисуем каждую строку
+                    line_height = font.getbbox("Аy")[3] - font.getbbox("Аy")[1]
+                    for i, line in enumerate(lines):
+                        draw.text((x_px, y_px + i * line_height), line, font=font, fill='black')
 
             elif element_type == "weight":
                 weight_g = dish_data.get("weight_g", 0)
@@ -194,19 +259,27 @@ class ImageLabelRenderer:
                 draw.text((x_px, y_px), text, font=font, fill='black')
 
             elif element_type == "composition":
+                # Состав с переносом строк
                 ingredients = dish_data.get("ingredients", [])
                 max_lines = element.get("maxLines", 3)
 
                 if ingredients:
-                    ingredients_text = ", ".join(ingredients[:max_lines])
-
-                    # Ограничиваем длину
-                    max_length = 50
-                    if len(ingredients_text) > max_length:
-                        ingredients_text = ingredients_text[:max_length-3] + "..."
-
+                    ingredients_text = ", ".join(ingredients)
                     text = f"Состав: {ingredients_text}"
-                    draw.text((x_px, y_px), text, font=font, fill='black')
+
+                    # Получаем ширину элемента
+                    size = element.get("size", {})
+                    width_mm = size.get("width", 50)
+                    max_width_px = int(width_mm * self.DPI / 25.4)
+
+                    # Разбиваем текст на строки с учетом maxLines
+                    lines = self._wrap_text(text, font, max_width_px)
+                    lines = lines[:max_lines]  # Ограничиваем количество строк
+
+                    # Рисуем каждую строку
+                    line_height = font.getbbox("Аy")[3] - font.getbbox("Аy")[1]
+                    for i, line in enumerate(lines):
+                        draw.text((x_px, y_px + i * line_height), line, font=font, fill='black')
 
             elif element_type == "datetime":
                 label = element.get("label", "Изготовлено:")

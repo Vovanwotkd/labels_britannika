@@ -37,7 +37,12 @@ export default function PropertiesPanel({
 
   const hasFontWeight =
     element.type === 'dish_name' ||
-    element.type === 'text'
+    element.type === 'text' ||
+    element.type === 'composition' ||
+    element.type === 'bju' ||
+    element.type === 'weight' ||
+    element.type === 'datetime' ||
+    element.type === 'shelf_life'
 
   return (
     <div className="p-4 space-y-4">

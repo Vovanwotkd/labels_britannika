@@ -63,6 +63,7 @@ export interface CompositionElement extends BaseElement {
   type: 'composition'
   fontSize: number
   fontFamily: FontFamily
+  fontWeight: 'normal' | 'bold'
   color: string
   maxLines: number
 }
@@ -71,6 +72,7 @@ export interface BJUElement extends BaseElement {
   type: 'bju'
   fontSize: number
   fontFamily: FontFamily
+  fontWeight: 'normal' | 'bold'
   color: string
   showProteins: boolean
   showFats: boolean
@@ -82,6 +84,7 @@ export interface WeightElement extends BaseElement {
   type: 'weight'
   fontSize: number
   fontFamily: FontFamily
+  fontWeight: 'normal' | 'bold'
   color: string
   showUnit: boolean // показывать "г" или нет
 }
@@ -90,6 +93,7 @@ export interface DateTimeElement extends BaseElement {
   type: 'datetime'
   fontSize: number
   fontFamily: FontFamily
+  fontWeight: 'normal' | 'bold'
   color: string
   format: 'datetime' | 'date' | 'time'
   label: string // "Дата производства:", "Годен до:" и т.д.
@@ -99,6 +103,7 @@ export interface ShelfLifeElement extends BaseElement {
   type: 'shelf_life'
   fontSize: number
   fontFamily: FontFamily
+  fontWeight: 'normal' | 'bold'
   color: string
   hours: number // срок годности в часах
 }
