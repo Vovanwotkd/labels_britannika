@@ -39,7 +39,8 @@ export interface LogoElement extends BaseElement {
   imageData?: string // base64
 }
 
-export type FontWeight = 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900
+// FontWeight: от 100 до 900 с любым шагом
+export type FontWeight = number
 
 export interface TextElement extends BaseElement {
   type: 'text'

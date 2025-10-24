@@ -396,10 +396,10 @@ export default function PropertiesPanel({
                 type="range"
                 min="100"
                 max="900"
-                step="100"
+                step="10"
                 value={element.fontWeight}
                 onChange={(e) =>
-                  onUpdate({ fontWeight: parseInt(e.target.value) as 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900 })
+                  onUpdate({ fontWeight: parseInt(e.target.value) })
                 }
                 className="block w-full"
               />

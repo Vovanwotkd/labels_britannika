@@ -59,21 +59,19 @@ class ImageLabelRenderer:
         except (ValueError, TypeError):
             weight = 400  # Default to Regular
 
-        # Маппинг fontWeight на файлы Roboto шрифтов
-        font_map = {
-            100: "/usr/share/fonts/truetype/roboto/Roboto-Thin.ttf",
-            200: "/usr/share/fonts/truetype/roboto/Roboto-Light.ttf",
-            300: "/usr/share/fonts/truetype/roboto/Roboto-Light.ttf",
-            400: "/usr/share/fonts/truetype/roboto/Roboto-Regular.ttf",
-            500: "/usr/share/fonts/truetype/roboto/Roboto-Medium.ttf",
-            600: "/usr/share/fonts/truetype/roboto/Roboto-Medium.ttf",
-            700: "/usr/share/fonts/truetype/roboto/Roboto-Bold.ttf",
-            800: "/usr/share/fonts/truetype/roboto/Roboto-Black.ttf",
-            900: "/usr/share/fonts/truetype/roboto/Roboto-Black.ttf",
-        }
-
-        # Получаем путь или fallback на Regular
-        font_path = font_map.get(weight, "/usr/share/fonts/truetype/roboto/Roboto-Regular.ttf")
+        # Маппинг fontWeight на файлы Roboto шрифтов (с диапазонами)
+        if weight < 150:
+            font_path = "/usr/share/fonts/truetype/roboto/Roboto-Thin.ttf"
+        elif weight < 350:
+            font_path = "/usr/share/fonts/truetype/roboto/Roboto-Light.ttf"
+        elif weight < 450:
+            font_path = "/usr/share/fonts/truetype/roboto/Roboto-Regular.ttf"
+        elif weight < 650:
+            font_path = "/usr/share/fonts/truetype/roboto/Roboto-Medium.ttf"
+        elif weight < 750:
+            font_path = "/usr/share/fonts/truetype/roboto/Roboto-Bold.ttf"
+        else:
+            font_path = "/usr/share/fonts/truetype/roboto/Roboto-Black.ttf"
 
         # Fallback на DejaVu если Roboto не найден
         if not os.path.exists(font_path):
