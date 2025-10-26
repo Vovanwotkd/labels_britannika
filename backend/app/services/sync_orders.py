@@ -96,12 +96,29 @@ class OrderSyncService:
                             orders_marked_cancelled += 1
 
                 else:
-                    # Заказ не найден - пропускаем (придёт через webhook)
-                    # Не создаём заказ вручную, т.к. у нас нет информации о блюдах
-                    # GetOrderList возвращает только totalPieces, но не список блюд
-                    logger.debug(
-                        f"⏭️  Order {visit_id}/{order_ident} not found in DB - skipping (will be created by webhook)"
+                    # Заказ не найден - запрашиваем детали и создаём
+                    logger.warning(
+                        f"⚠️  Order {visit_id}/{order_ident} not found in DB - fetching details from RKeeper"
                     )
+
+                    try:
+                        # Получаем полную информацию о заказе включая блюда
+                        order_details = await self.rkeeper_client.get_order(visit_id, order_ident)
+
+                        # Создаём заказ с блюдами
+                        new_order = await self._create_order_from_rkeeper(order_details)
+
+                        if new_order:
+                            orders_created += 1
+
+                            # Проверяем начальный статус
+                            if new_order.status == "DONE":
+                                orders_marked_done += 1
+                            elif new_order.status == "CANCELLED":
+                                orders_marked_cancelled += 1
+
+                    except Exception as e:
+                        logger.error(f"❌ Failed to create order from RKeeper: {e}")
 
             # Сохраняем изменения
             self.db.commit()
@@ -186,6 +203,97 @@ class OrderSyncService:
             )
 
         return updated
+
+    async def _create_order_from_rkeeper(self, order_details: Dict) -> Order:
+        """
+        Создать заказ с блюдами из данных RKeeper
+
+        Args:
+            order_details: Dict с информацией о заказе (из get_order())
+
+        Returns:
+            Order объект
+        """
+        from app.models import OrderItem, PrintJob
+        from app.services.printer.image_label_renderer import ImageLabelRenderer
+
+        visit_id = order_details["visit_id"]
+        order_ident = order_details["order_ident"]
+        table_code = order_details["table_code"]
+        order_sum = order_details["order_sum"]
+        total_pieces = order_details["total_pieces"]
+        paid = order_details["paid"]
+        finished = order_details["finished"]
+        dishes = order_details["dishes"]
+
+        # Определяем начальный статус
+        if total_pieces == 0:
+            status = "CANCELLED"
+            closed_at = datetime.now()
+        elif paid and finished:
+            status = "DONE"
+            closed_at = datetime.now()
+        else:
+            status = "NOT_PRINTED"
+            closed_at = None
+
+        # Создаём Order
+        order = Order(
+            visit_id=visit_id,
+            order_ident=order_ident,
+            table_code=table_code,
+            order_total=order_sum,
+            status=status,
+            closed_at=closed_at,
+        )
+
+        self.db.add(order)
+        self.db.flush()  # Получаем ID
+
+        logger.info(
+            f"➕ Created order #{order.id} from RKeeper: "
+            f"visit={visit_id}, order={order_ident}, table={table_code}, "
+            f"status={status}, sum={order_sum:.2f}₽, dishes={len(dishes)}"
+        )
+
+        # Создаём OrderItem для каждого блюда
+        for dish in dishes:
+            order_item = OrderItem(
+                order_id=order.id,
+                rk_code=dish["dish_code"],
+                dish_name=dish["dish_name"],
+                quantity=dish["quantity"] / 1000,  # RKeeper в граммах
+            )
+            self.db.add(order_item)
+            self.db.flush()
+
+            # Создаём PrintJob для каждого блюда
+            # Получаем TSPL данные из шаблона
+            try:
+                renderer = ImageLabelRenderer(self.db)
+                label_data = await renderer.render_label(
+                    dish_name=dish["dish_name"],
+                    dish_code=dish["dish_code"],
+                    table_name=f"Стол {table_code}",
+                    weight_g=dish["quantity"],
+                )
+
+                print_job = PrintJob(
+                    order_id=order.id,
+                    order_item_id=order_item.id,
+                    label_type="image",
+                    dish_rid=dish["dish_code"],
+                    tspl_data=None,  # Для image типа не нужен TSPL
+                    status="QUEUED",
+                )
+                self.db.add(print_job)
+
+                logger.debug(f"  ➕ Created print job for {dish['dish_name']}")
+
+            except Exception as e:
+                logger.error(f"  ❌ Failed to create print job for {dish['dish_name']}: {e}")
+
+        return order
 
 
 # ============================================================================

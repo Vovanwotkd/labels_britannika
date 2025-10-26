@@ -215,6 +215,70 @@ class RKeeperClient:
         logger.info(f"📋 Fetched {len(orders)} orders from RKeeper")
         return orders
 
+    async def get_order(self, visit_id: str, order_ident: str) -> Dict[str, any]:
+        """
+        Получает детальную информацию о заказе включая блюда
+
+        Args:
+            visit_id: ID визита
+            order_ident: ID заказа
+
+        Returns:
+            Dict с полной информацией о заказе и блюдах
+        """
+        xml_request = f'''<?xml version="1.0" encoding="UTF-8"?>
+<RK7Query>
+    <RK7CMD CMD="GetOrder" visit="{visit_id}" order="{order_ident}"/>
+</RK7Query>'''
+
+        root = await self._send_request(xml_request)
+
+        # Парсим Order элемент
+        order_elem = root.find(".//Order")
+        if order_elem is None:
+            raise ValueError(f"Order not found: visit={visit_id}, order={order_ident}")
+
+        # Основная информация о заказе
+        table_elem = order_elem.find("Table")
+        table_code = table_elem.get("code", "") if table_elem is not None else ""
+        table_name = table_elem.get("name", table_code) if table_elem is not None else table_code
+
+        order_sum_kopeks = int(order_elem.get("orderSum", 0))
+        order_sum = order_sum_kopeks / 100.0
+
+        total_pieces = int(order_elem.get("totalPieces", 0))
+        paid = order_elem.get("paid", "0") == "1"
+        finished = order_elem.get("finished", "0") == "1"
+
+        # Собираем блюда из Session
+        dishes = []
+        session_elem = order_elem.find(".//Session")
+        if session_elem is not None:
+            for dish_elem in session_elem.findall("Dish"):
+                dish_id = dish_elem.get("id", "")
+                dish_code = dish_elem.get("code", "")
+                dish_name = dish_elem.get("name", "")
+                quantity = int(dish_elem.get("quantity", 0))
+
+                dishes.append({
+                    "dish_id": dish_id,
+                    "dish_code": dish_code,
+                    "dish_name": dish_name,
+                    "quantity": quantity,
+                })
+
+        return {
+            "visit_id": visit_id,
+            "order_ident": order_ident,
+            "table_code": table_code,
+            "table_name": table_name,
+            "order_sum": order_sum,
+            "total_pieces": total_pieces,
+            "paid": paid,
+            "finished": finished,
+            "dishes": dishes,
+        }
+
 
 # Singleton instance
 _rkeeper_client = None
