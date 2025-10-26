@@ -96,6 +96,23 @@ async def rkeeper_webhook(
                 f"✅ Webhook processed: order_id={result['order_id']}, "
                 f"items={result['items_processed']}, jobs={result['jobs_created']}"
             )
+
+            # Отправляем WebSocket уведомление
+            from app.services.websocket.manager import broadcast_order_update
+            try:
+                await broadcast_order_update(
+                    order_id=result['order_id'],
+                    event_type=parsed_data.get('event_type', 'order_updated'),
+                    data={
+                        "items_count": result.get('items_processed', 0),
+                        "jobs_count": result.get('jobs_created', 0),
+                    }
+                )
+                logger.debug(f"📢 Sent WebSocket notification for order {result['order_id']}")
+            except Exception as ws_err:
+                logger.error(f"❌ Failed to send WebSocket notification: {ws_err}")
+                # Не падаем, продолжаем обработку
+
         else:
             logger.error(f"❌ Webhook processing failed: {result['message']}")
 
