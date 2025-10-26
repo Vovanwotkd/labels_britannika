@@ -110,13 +110,13 @@ export default function OrdersBoard() {
 
   // Фильтрация и сортировка заказов
   const sortedOrders = useMemo(() => {
-    // 1. Фильтруем CANCELLED заказы (скрываем их только если не выбран фильтр CANCELLED)
+    // 1. Фильтруем по статусу
     let filtered = orders.filter((order) => {
-      // Если выбран конкретный статус в фильтре - не скрываем CANCELLED
+      // Если выбран конкретный статус - показываем только этот статус
       if (filter.status) {
-        return true
+        return order.status === filter.status
       }
-      // Если фильтр "Все" - скрываем CANCELLED по умолчанию
+      // Если фильтр "Все" - показываем все кроме CANCELLED
       return order.status !== 'CANCELLED'
     })
 
