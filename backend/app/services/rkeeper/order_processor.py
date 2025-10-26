@@ -312,11 +312,13 @@ class OrderProcessor:
 
         if order_item:
             # Обновляем существующий OrderItem
+            # Важно: RKeeper может создать дубликат блюда в новой сессии (новый uni)
+            # Поэтому нужно СУММИРОВАТЬ количество, а не заменять
             old_qty = order_item.quantity
-            order_item.quantity = new_quantity
+            order_item.quantity = old_qty + delta  # Добавляем дельту к существующему
             order_item.dish_name = change["name"]
 
-            logger.debug(f"  📝 Updated order_item #{order_item.id}: {old_qty}→{new_quantity}")
+            logger.debug(f"  📝 Updated order_item #{order_item.id}: {old_qty}→{order_item.quantity} (Δ{delta:+d})")
 
             # Печатаем только НОВЫЕ порции (delta)
             if delta > 0:
