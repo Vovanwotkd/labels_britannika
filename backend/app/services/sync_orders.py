@@ -319,3 +319,47 @@ async def sync_orders_with_rkeeper(db: Session) -> Dict:
     """
     service = OrderSyncService(db)
     return await service.sync_orders()
+
+
+def sync_single_order(db: Session, order_id: int) -> None:
+    """
+    Синхронизировать один заказ через GetOrder API
+
+    Используется после webhook для корректировки quantities
+    (когда RKeeper создаёт дубликаты в разных Session)
+
+    Args:
+        db: Database session
+        order_id: ID заказа в нашей БД
+    """
+    from app.models import Order, OrderItem
+    from app.services.rkeeper_client import RKeeperClient
+
+    # Получаем заказ
+    order = db.query(Order).filter(Order.id == order_id).first()
+    if not order:
+        return
+
+    # Запрашиваем актуальные данные из RKeeper
+    client = RKeeperClient()
+    order_data = client.get_order(order.visit_id, order.order_ident)
+
+    if not order_data or not order_data.get('dishes'):
+        return
+
+    # Обновляем quantities из GetOrder (суммирует все Session)
+    for dish_data in order_data['dishes']:
+        # Ищем OrderItem по rk_code
+        order_item = db.query(OrderItem).filter(
+            OrderItem.order_id == order.id,
+            OrderItem.rk_code == dish_data['rk_code']
+        ).first()
+
+        if order_item and order_item.quantity != dish_data['quantity']:
+            logger.debug(
+                f"  🔄 Synced quantity for {dish_data['rk_code']}: "
+                f"{order_item.quantity}→{dish_data['quantity']}"
+            )
+            order_item.quantity = dish_data['quantity']
+
+    db.commit()
