@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.api.auth_api import get_current_user
 from app.models import Setting, User
+from app.services.sync_orders import sync_orders_with_rkeeper
 
 router = APIRouter(prefix="/api/sync", tags=["sync"])
 
@@ -90,3 +91,35 @@ async def get_sync_status(
         "last_error": sync_error.value if sync_error else None,
         "interval_hours": int(sync_interval.value) if sync_interval and sync_interval.value else 24
     }
+
+
+@router.post("/orders")
+async def sync_orders(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Dict:
+    """
+    Синхронизировать заказы с RKeeper вручную
+
+    Запускает синхронизацию заказов из RKeeper.
+    Обновляет статусы существующих заказов и создаёт пропущенные.
+    """
+    try:
+        result = await sync_orders_with_rkeeper(db)
+
+        return {
+            "status": "success" if result["success"] else "error",
+            "fetched_from_rkeeper": result["fetched_from_rkeeper"],
+            "orders_created": result["orders_created"],
+            "orders_updated": result["orders_updated"],
+            "orders_marked_done": result["orders_marked_done"],
+            "orders_marked_cancelled": result["orders_marked_cancelled"],
+            "message": result["message"],
+            "synced_at": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Ошибка синхронизации заказов с RKeeper: {str(e)}"
+        )

@@ -26,6 +26,8 @@ export default function OrderCard({ order, onPrintAll, onOpenDetails, onDelete }
       return 'bg-[#D8F7D0]' // Зелёный - напечатан
     } else if (status === 'FAILED') {
       return 'bg-[#FFD6D6]' // Красный - ошибка
+    } else if (status === 'CANCELLED') {
+      return 'bg-[#E9D5FF]' // Фиолетовый - отменён
     } else {
       // NOT_PRINTED, PRINTING - голубой (новый)
       return 'bg-[#D6E8FF]'
@@ -38,6 +40,8 @@ export default function OrderCard({ order, onPrintAll, onOpenDetails, onDelete }
       return '✓' // Галочка для готовых
     } else if (status === 'FAILED') {
       return '✕' // Крестик для ошибок
+    } else if (status === 'CANCELLED') {
+      return '⊘' // Перечёркнутый круг для отменённых
     } else {
       return '🍽️' // Блюдо для новых
     }

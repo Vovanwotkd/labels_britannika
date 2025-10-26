@@ -304,11 +304,27 @@ export interface SyncTriggerResponse {
   started_at: string
 }
 
+export interface SyncOrdersResponse {
+  status: 'success' | 'error'
+  fetched_from_rkeeper: number
+  orders_created: number
+  orders_updated: number
+  orders_marked_done: number
+  orders_marked_cancelled: number
+  message: string
+  synced_at: string
+}
+
 export const syncApi = {
   getStatus: () => fetchApi<SyncStatus>('/sync/status'),
 
   trigger: () =>
     fetchApi<SyncTriggerResponse>('/sync/trigger', {
+      method: 'POST',
+    }),
+
+  syncOrders: () =>
+    fetchApi<SyncOrdersResponse>('/sync/orders', {
       method: 'POST',
     }),
 }

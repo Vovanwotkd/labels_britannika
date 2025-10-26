@@ -64,6 +64,7 @@ class RKeeperXMLParser:
                 "order_sum": float,  # Общая сумма заказа
                 "paid": bool,  # Оплачен ли заказ
                 "finished": bool,  # Завершен ли заказ
+                "total_pieces": int,  # Общее количество порций (0 = все блюда удалены)
                 "changes": [  # Изменения из ChangeLog
                     {
                         "rk_code": str,
@@ -106,6 +107,7 @@ class RKeeperXMLParser:
             order_sum = order_sum_kopeks / 100.0
             paid = order_elem.get('paid', '0') == '1'
             finished = order_elem.get('finished', '0') == '1'
+            total_pieces = int(order_elem.get('totalPieces', 0))
 
             if not visit_id or not order_ident:
                 logger.error("visit_id или order_ident отсутствуют")
@@ -135,13 +137,14 @@ class RKeeperXMLParser:
                 "order_sum": order_sum,
                 "paid": paid,
                 "finished": finished,
+                "total_pieces": total_pieces,
                 "changes": changes,
             }
 
             logger.info(
                 f"✅ Parsed: event={event_type}, visit={visit_id}, order={order_ident}, "
                 f"table={table_code}, changes={len(changes)}, sum={order_sum:.2f}₽, "
-                f"paid={paid}, finished={finished}"
+                f"paid={paid}, finished={finished}, totalPieces={total_pieces}"
             )
 
             return result

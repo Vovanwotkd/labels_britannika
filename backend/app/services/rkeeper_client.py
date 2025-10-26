@@ -4,10 +4,14 @@ RKeeper 7 XML API Client
 """
 import httpx
 import xml.etree.ElementTree as ET
+import logging
 from typing import List, Dict, Optional
+from datetime import datetime
 from sqlalchemy.orm import Session
 from ..models.setting import Setting
 from ..core.database import SessionLocal
+
+logger = logging.getLogger(__name__)
 
 
 class RKeeperClient:
@@ -121,6 +125,95 @@ class RKeeperClient:
                     })
 
         return tables
+
+    async def get_order_list(self, only_opened: bool = True) -> List[Dict[str, any]]:
+        """
+        Получает список заказов из RKeeper
+
+        Args:
+            only_opened: Вернуть только активные заказы (по умолчанию True)
+
+        Returns:
+            Список словарей с данными заказов:
+            [
+                {
+                    "visit_id": str,
+                    "order_ident": str,
+                    "table_code": str,
+                    "table_name": str,
+                    "order_sum": float,
+                    "total_pieces": int,
+                    "paid": bool,
+                    "finished": bool,
+                    "create_time": datetime,
+                    "finish_time": Optional[datetime],
+                },
+                ...
+            ]
+        """
+        # Формируем XML запрос
+        only_opened_attr = '1' if only_opened else '0'
+        xml_request = f'''<?xml version="1.0" encoding="UTF-8"?>
+<RK7Query>
+    <RK7CMD CMD="GetOrderList" onlyOpened="{only_opened_attr}" needIdents="1" needCodes="1" needNames="1"/>
+</RK7Query>'''
+
+        root = await self._send_request(xml_request)
+
+        # Парсим ответ
+        orders = []
+        for visit_elem in root.findall(".//Visit"):
+            visit_id = visit_elem.get("VisitID", "")
+
+            # Проходим по всем заказам в визите
+            orders_elem = visit_elem.find("Orders")
+            if orders_elem is not None:
+                for order_elem in orders_elem.findall("Order"):
+                    # Получаем атрибуты заказа
+                    order_ident = order_elem.get("OrderID", "")  # В GetOrderList возвращается OrderID
+                    order_sum_kopeks = int(order_elem.get("OrderSum", 0))
+                    order_sum = order_sum_kopeks / 100.0
+                    total_pieces = int(order_elem.get("TotalPieces", 0))
+                    paid = order_elem.get("Finished", "0") == "1"  # В GetOrderList нет paid, используем Finished
+                    finished = order_elem.get("Finished", "0") == "1"
+
+                    # Парсим даты
+                    create_time_str = order_elem.get("CreateTime")
+                    finish_time_str = order_elem.get("FinishTime")
+
+                    create_time = None
+                    if create_time_str:
+                        try:
+                            create_time = datetime.fromisoformat(create_time_str.replace("Z", "+00:00"))
+                        except:
+                            pass
+
+                    finish_time = None
+                    if finish_time_str:
+                        try:
+                            finish_time = datetime.fromisoformat(finish_time_str.replace("Z", "+00:00"))
+                        except:
+                            pass
+
+                    # Получаем код и название стола
+                    table_code = order_elem.get("TableCode", "")
+                    table_name = order_elem.get("TableName", table_code)
+
+                    orders.append({
+                        "visit_id": visit_id,
+                        "order_ident": order_ident,
+                        "table_code": table_code,
+                        "table_name": table_name,
+                        "order_sum": order_sum,
+                        "total_pieces": total_pieces,
+                        "paid": paid,
+                        "finished": finished,
+                        "create_time": create_time,
+                        "finish_time": finish_time,
+                    })
+
+        logger.info(f"📋 Fetched {len(orders)} orders from RKeeper")
+        return orders
 
 
 # Singleton instance

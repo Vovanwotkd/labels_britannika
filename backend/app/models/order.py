@@ -22,7 +22,7 @@ class Order(Base):
     table_code = Column(String, nullable=False, index=True)  # Код стола (141)
     order_total = Column(Numeric(10, 2), nullable=True)  # Сумма заказа
     status = Column(String, nullable=False, default="NOT_PRINTED", index=True)
-    # Статусы: NOT_PRINTED, QUEUED, PRINTING, DONE, FAILED
+    # Статусы: NOT_PRINTED, QUEUED, PRINTING, DONE, FAILED, CANCELLED
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

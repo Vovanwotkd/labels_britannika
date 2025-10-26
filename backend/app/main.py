@@ -7,10 +7,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.core.config import settings
-from app.core.database import init_db
+from app.core.database import init_db, SessionLocal
 from app.services.printer.queue_worker import PrintQueueWorker, set_worker
+from app.services.sync_orders import sync_orders_with_rkeeper
 
 # ============================================================================
 # ЛОГИРОВАНИЕ
@@ -52,7 +54,39 @@ async def lifespan(app: FastAPI):
     set_worker(worker)
     await worker.start()
 
-    # TODO: Запуск background tasks (синхронизация, архивация)
+    # Запуск background tasks (синхронизация с RKeeper)
+    logger.info("⏰ Запуск фонового планировщика...")
+    scheduler = AsyncIOScheduler()
+
+    # Задача: синхронизация заказов с RKeeper каждую минуту
+    async def sync_task():
+        """Периодическая синхронизация с RKeeper"""
+        db = SessionLocal()
+        try:
+            result = await sync_orders_with_rkeeper(db)
+            if result["success"]:
+                logger.debug(
+                    f"🔄 Sync completed: "
+                    f"created={result['orders_created']}, "
+                    f"updated={result['orders_updated']}"
+                )
+            else:
+                logger.warning(f"⚠️  Sync failed: {result['message']}")
+        except Exception as e:
+            logger.error(f"❌ Sync task error: {e}", exc_info=True)
+        finally:
+            db.close()
+
+    scheduler.add_job(
+        sync_task,
+        'interval',
+        minutes=1,
+        id='sync_orders',
+        name='Синхронизация заказов с RKeeper',
+        replace_existing=True
+    )
+    scheduler.start()
+    logger.info("✅ Фоновая синхронизация запущена (каждую минуту)")
 
     logger.info("✅ Приложение запущено")
 
@@ -61,8 +95,12 @@ async def lifespan(app: FastAPI):
     # SHUTDOWN
     logger.info("🛑 Остановка приложения...")
 
+    # Graceful shutdown scheduler
+    if scheduler:
+        scheduler.shutdown(wait=False)
+        logger.info("⏰ Планировщик остановлен")
+
     # Graceful shutdown print queue
-    worker = worker  # worker из scope выше
     if worker:
         await worker.stop()
 

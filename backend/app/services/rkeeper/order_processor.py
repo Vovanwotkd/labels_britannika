@@ -48,6 +48,7 @@ class OrderProcessor:
                 "order_sum": float,
                 "paid": bool,
                 "finished": bool,
+                "total_pieces": int,
                 "changes": [...]  # Изменения блюд
             }
 
@@ -68,12 +69,13 @@ class OrderProcessor:
             order_sum = parsed_data["order_sum"]
             paid = parsed_data["paid"]
             finished = parsed_data["finished"]
+            total_pieces = parsed_data["total_pieces"]
             changes = parsed_data["changes"]
 
             logger.info(
                 f"🔄 Processing RKeeper event: {event_type}, "
                 f"visit={visit_id}, order={order_ident}, table={table_code}, "
-                f"sum={order_sum:.2f}₽, paid={paid}, finished={finished}"
+                f"sum={order_sum:.2f}₽, paid={paid}, finished={finished}, totalPieces={total_pieces}"
             )
 
             # Проверяем фильтр столов (если настроен)
@@ -104,17 +106,18 @@ class OrderProcessor:
                 items_processed += 1
                 jobs_created += result["jobs_created"]
 
-            # Закрываем заказ если оплачен и завершен
-            if paid and finished:
+            # Проверяем статус заказа
+            # 1. Отменяем заказ если все блюда удалены (totalPieces=0)
+            if total_pieces == 0 or (event_type == "Quit Order" and total_pieces == 0):
+                order.status = "CANCELLED"
+                order.closed_at = datetime.now()
+                logger.info(f"🚫 Order {order.id} cancelled (totalPieces=0 or Quit Order with empty order)")
+
+            # 2. Закрываем заказ если оплачен и завершен (даже если не был напечатан)
+            elif paid and finished:
                 order.status = "DONE"
                 order.closed_at = datetime.now()
                 logger.info(f"✅ Order {order.id} closed (paid and finished)")
-
-            # Отменяем заказ если все блюда удалены (Quit Order с пустым заказом)
-            elif event_type == "Quit Order" and order_sum == 0:
-                order.status = "CANCELLED"
-                order.closed_at = datetime.now()
-                logger.info(f"🚫 Order {order.id} cancelled (Quit Order with empty order)")
 
             # Сохраняем всё
             self.db.commit()

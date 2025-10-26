@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { ordersApi } from '../api/client'
+import { ordersApi, syncApi } from '../api/client'
 import { useWebSocketMessage } from '../contexts/WebSocketContext'
 import type {
   OrderListItem,
@@ -20,6 +20,7 @@ export default function OrdersBoard() {
   const [orders, setOrders] = useState<OrderListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [syncing, setSyncing] = useState(false)
   const [filter, setFilter] = useState<{
     status?: string
     table_code?: string
@@ -44,10 +45,26 @@ export default function OrdersBoard() {
     }
   }, [isStatusDropdownOpen])
 
-  // Загрузка заказов
-  const loadOrders = useCallback(async () => {
+  // Синхронизация с RKeeper и загрузка заказов
+  const loadOrders = useCallback(async (withSync: boolean = false) => {
     try {
       setLoading(true)
+
+      // Если withSync=true, сначала синхронизируемся с RKeeper
+      if (withSync) {
+        setSyncing(true)
+        try {
+          const syncResult = await syncApi.syncOrders()
+          console.log('Sync result:', syncResult)
+        } catch (syncErr) {
+          console.error('Sync error:', syncErr)
+          // Продолжаем загрузку заказов даже если синхронизация не удалась
+        } finally {
+          setSyncing(false)
+        }
+      }
+
+      // Загружаем заказы из нашей БД
       const data = await ordersApi.getAll({
         ...filter,
         limit: 100,
@@ -276,10 +293,17 @@ export default function OrdersBoard() {
             Выбрать столы
           </button>
           <button
-            onClick={loadOrders}
-            className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            onClick={() => loadOrders(true)}
+            disabled={syncing}
+            className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            Обновить
+            {syncing && (
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+              </svg>
+            )}
+            {syncing ? 'Синхронизация...' : 'Обновить'}
           </button>
         </div>
       </div>
