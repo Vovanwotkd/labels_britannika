@@ -262,7 +262,7 @@ class OrderSyncService:
                 order_id=order.id,
                 rk_code=dish["dish_code"],
                 dish_name=dish["dish_name"],
-                quantity=dish["quantity"] / 1000,  # RKeeper в граммах
+                quantity=dish["quantity"],  # Уже в порциях (конвертировано в get_order)
             )
             self.db.add(order_item)
             self.db.flush()
@@ -275,7 +275,7 @@ class OrderSyncService:
                     dish_name=dish["dish_name"],
                     dish_code=dish["dish_code"],
                     table_name=f"Стол {table_code}",
-                    weight_g=dish["quantity"],
+                    weight_g=dish["quantity_g"],  # Используем граммы для renderer
                 )
 
                 print_job = PrintJob(

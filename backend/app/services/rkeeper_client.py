@@ -258,13 +258,15 @@ class RKeeperClient:
                 dish_id = dish_elem.get("id", "")
                 dish_code = dish_elem.get("code", "")
                 dish_name = dish_elem.get("name", "")
-                quantity = int(dish_elem.get("quantity", 0))
+                quantity_g = int(dish_elem.get("quantity", 0))
+                quantity = quantity_g // 1000  # Конвертируем граммы в порции (1000г = 1 порция)
 
                 dishes.append({
                     "dish_id": dish_id,
                     "dish_code": dish_code,
                     "dish_name": dish_name,
                     "quantity": quantity,
+                    "quantity_g": quantity_g,  # Сохраняем граммы для renderer
                 })
 
         return {
