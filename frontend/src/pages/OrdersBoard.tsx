@@ -79,7 +79,7 @@ export default function OrdersBoard() {
   }, [filter])
 
   useEffect(() => {
-    loadOrders()
+    loadOrders(false)
   }, [loadOrders])
 
   // WebSocket: обновления заказов
@@ -88,10 +88,10 @@ export default function OrdersBoard() {
 
     if (message.event === 'new_order') {
       // Перезагружаем список
-      loadOrders()
+      loadOrders(false)
     } else if (message.event === 'order_updated') {
       // Обновляем конкретный заказ
-      loadOrders()
+      loadOrders(false)
     } else if (message.event === 'order_cancelled') {
       // Удаляем отмененный заказ из списка
       setOrders((prev) => prev.filter((order) => order.id !== message.order_id))
@@ -104,7 +104,7 @@ export default function OrdersBoard() {
 
     // Можно также перезагрузить весь список для точности
     if (message.status === 'DONE' || message.status === 'FAILED') {
-      loadOrders()
+      loadOrders(false)
     }
   })
 
@@ -153,7 +153,7 @@ export default function OrdersBoard() {
       }
 
       // Перезагружаем заказы для обновления статусов
-      await loadOrders()
+      await loadOrders(false)
     } catch (err) {
       console.error('Failed to print order:', err)
       alert('Не удалось напечатать заказ')
@@ -198,7 +198,7 @@ export default function OrdersBoard() {
   // Сохранение выбранных столов
   const handleSaveTables = async () => {
     // Перезагружаем заказы после изменения фильтра столов
-    await loadOrders()
+    await loadOrders(false)
     setIsTableModalOpen(false)
   }
 
@@ -217,7 +217,7 @@ export default function OrdersBoard() {
           <div className="text-red-800 font-medium">Ошибка</div>
           <div className="text-red-600 text-sm mt-1">{error}</div>
           <button
-            onClick={loadOrders}
+            onClick={() => loadOrders(false)}
             className="mt-2 text-sm text-red-600 underline"
           >
             Повторить
