@@ -97,43 +97,6 @@ async def rkeeper_webhook(
                 f"items={result['items_processed']}, jobs={result['jobs_created']}"
             )
 
-            # Синхронизируем правильные количества через GetOrder API
-            # ТОЛЬКО если обнаружены дубликаты блюд (одинаковые rk_code в разных Session)
-            # Это минимизирует нагрузку на RKeeper сервер
-            if result.get('has_duplicates', False):
-                logger.info("🔄 Detected duplicates, syncing quantities from GetOrder API...")
-                try:
-                    from app.services.rkeeper_client import RKeeperClient
-                    from app.models import Order
-
-                    order = db.query(Order).filter(Order.id == result['order_id']).first()
-                    if order:
-                        client = RKeeperClient()
-                        order_data = client.get_order(order.visit_id, order.order_ident)
-
-                        if order_data and order_data.get('dishes'):
-                            # Обновляем количества из GetOrder (суммирует все Session)
-                            from app.models import OrderItem
-
-                            for dish_data in order_data['dishes']:
-                                order_item = db.query(OrderItem).filter(
-                                    OrderItem.order_id == order.id,
-                                    OrderItem.rk_code == dish_data['rk_code']
-                                ).first()
-
-                                if order_item and order_item.quantity != dish_data['quantity']:
-                                    logger.debug(
-                                        f"  🔄 Synced quantity for {dish_data['rk_code']}: "
-                                        f"{order_item.quantity}→{dish_data['quantity']}"
-                                    )
-                                    order_item.quantity = dish_data['quantity']
-
-                            db.commit()
-                            logger.info("✅ Synced quantities from GetOrder API")
-                except Exception as sync_err:
-                    logger.warning(f"⚠️  Failed to sync quantities from GetOrder: {sync_err}")
-                    # Не падаем, продолжаем обработку
-
             # Отправляем WebSocket уведомление
             from app.services.websocket.manager import broadcast_order_update
 
