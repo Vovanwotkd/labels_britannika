@@ -233,6 +233,11 @@ class RKeeperClient:
 
         root = await self._send_request(xml_request)
 
+        # DEBUG: Логируем полный XML ответ
+        import xml.etree.ElementTree as ET
+        xml_response = ET.tostring(root, encoding='unicode')
+        logger.info(f"🔍 GetOrder XML response for visit={visit_id}, order={order_ident}:\n{xml_response}")
+
         # Парсим Order элемент
         order_elem = root.find(".//Order")
         if order_elem is None:
