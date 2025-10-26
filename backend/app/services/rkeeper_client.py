@@ -255,10 +255,13 @@ class RKeeperClient:
         paid = order_elem.get("paid", "0") == "1"
         finished = order_elem.get("finished", "0") == "1"
 
-        # Собираем блюда из Session
-        dishes = []
-        session_elem = order_elem.find(".//Session")
-        if session_elem is not None:
+        # Собираем блюда из ВСЕХ Session элементов (может быть несколько сессий)
+        dishes_dict = {}  # {dish_code: {dish_info + quantity}}
+
+        for session_elem in order_elem.findall(".//Session"):
+            session_uni = session_elem.get("uni", "?")
+            logger.debug(f"  Parsing Session uni={session_uni}")
+
             for dish_elem in session_elem.findall("Dish"):
                 dish_id = dish_elem.get("id", "")
                 dish_code = dish_elem.get("code", "")
@@ -266,18 +269,40 @@ class RKeeperClient:
                 quantity_g = int(dish_elem.get("quantity", 0))
                 quantity = quantity_g // 1000  # Конвертируем граммы в порции (1000г = 1 порция)
 
+                # Проверяем есть ли Void элемент (отменённое блюдо)
+                void_elem = dish_elem.find("Void")
+                is_voided = void_elem is not None
+
                 logger.info(
-                    f"📦 GetOrder dish parsed: name='{dish_name}', code={dish_code}, "
-                    f"quantity_raw={quantity_g}, quantity_portions={quantity}"
+                    f"📦 GetOrder dish parsed: session={session_uni}, name='{dish_name}', code={dish_code}, "
+                    f"quantity_raw={quantity_g}, quantity_portions={quantity}, voided={is_voided}"
                 )
 
-                dishes.append({
-                    "dish_id": dish_id,
-                    "dish_code": dish_code,
-                    "dish_name": dish_name,
-                    "quantity": quantity,
-                    "quantity_g": quantity_g,  # Сохраняем граммы для renderer
-                })
+                # Пропускаем отменённые блюда (с Void элементом)
+                if is_voided:
+                    logger.debug(f"  ⏭️  Skipping voided dish: {dish_name}")
+                    continue
+
+                # Пропускаем блюда с quantity=0
+                if quantity == 0:
+                    logger.debug(f"  ⏭️  Skipping dish with quantity=0: {dish_name}")
+                    continue
+
+                # Суммируем количество для одинаковых блюд из разных сессий
+                if dish_code in dishes_dict:
+                    dishes_dict[dish_code]["quantity"] += quantity
+                    dishes_dict[dish_code]["quantity_g"] += quantity_g
+                    logger.debug(f"  ➕ Added to existing dish {dish_code}: total quantity={dishes_dict[dish_code]['quantity']}")
+                else:
+                    dishes_dict[dish_code] = {
+                        "dish_id": dish_id,
+                        "dish_code": dish_code,
+                        "dish_name": dish_name,
+                        "quantity": quantity,
+                        "quantity_g": quantity_g,
+                    }
+
+        dishes = list(dishes_dict.values())
 
         return {
             "visit_id": visit_id,
