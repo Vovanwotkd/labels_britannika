@@ -38,6 +38,12 @@ class PrinterClient:
         Returns:
             True если успешно, False при ошибке
         """
+        # DEBUG режим: пропускаем реальную печать
+        import os
+        if os.getenv("DEBUG_SAVE_PNG", "false").lower() == "true":
+            logger.info(f"🖼️  DEBUG режим: пропускаем отправку на принтер (сохранено в PNG)")
+            return True
+
         try:
             # Создаём TCP socket
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:

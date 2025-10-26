@@ -296,6 +296,9 @@ class PrintQueueWorker:
                         order_item_id=job.order_item_id
                     )
 
+                    # Проверяем все ли PrintJob заказа напечатаны
+                    await self._check_order_completion(db, job)
+
                 else:
                     # Ошибка печати
                     await self._handle_job_failure(db, job, "Printer returned failure")
@@ -356,6 +359,74 @@ class PrintQueueWorker:
                 status="FAILED",
                 order_item_id=job.order_item_id
             )
+
+            # Проверяем статус всего заказа (может все остальные тоже FAILED/DONE)
+            await self._check_order_completion(db, job)
+
+    async def _check_order_completion(self, db: Session, completed_job: PrintJob):
+        """
+        Проверить завершены ли все PrintJob заказа и обновить статус Order
+
+        Вызывается после успешной печати каждого PrintJob.
+        Если все PrintJob заказа завершены (DONE) - меняем статус Order на DONE.
+
+        Args:
+            db: Database session
+            completed_job: Только что завершённый PrintJob
+        """
+        from app.models import Order, PrintJob
+
+        # Получаем заказ
+        order = db.query(Order).filter(Order.id == completed_job.order_id).first()
+        if not order:
+            return
+
+        # Собираем все PrintJob заказа
+        all_jobs = []
+        for item in order.items:
+            all_jobs.extend(item.print_jobs)
+
+        if not all_jobs:
+            return
+
+        # Проверяем все ли DONE
+        all_done = all(job.status == "DONE" for job in all_jobs)
+        any_failed = any(job.status == "FAILED" for job in all_jobs)
+
+        logger.info(
+            f"📊 Order #{order.id} print status: "
+            f"total={len(all_jobs)}, "
+            f"done={sum(1 for j in all_jobs if j.status == 'DONE')}, "
+            f"failed={sum(1 for j in all_jobs if j.status == 'FAILED')}, "
+            f"other={sum(1 for j in all_jobs if j.status not in ['DONE', 'FAILED'])}"
+        )
+
+        if all_done:
+            # ВСЕ этикетки напечатаны успешно
+            order.status = "DONE"
+            order.updated_at = datetime.now()
+            db.commit()
+
+            logger.info(f"✅ Order #{order.id} marked as DONE (all {len(all_jobs)} jobs printed)")
+
+            # WebSocket broadcast - order completed
+            from app.services.websocket.manager import broadcast_order_update
+            await broadcast_order_update(order.id, "order_completed")
+
+        elif any_failed and not any(job.status in ["QUEUED", "PRINTING"] for job in all_jobs):
+            # Есть FAILED и нет активных (все либо DONE либо FAILED)
+            order.status = "FAILED"
+            order.updated_at = datetime.now()
+            db.commit()
+
+            failed_count = sum(1 for j in all_jobs if j.status == "FAILED")
+            logger.warning(
+                f"❌ Order #{order.id} marked as FAILED ({failed_count}/{len(all_jobs)} jobs failed)"
+            )
+
+            # WebSocket broadcast - order failed
+            from app.services.websocket.manager import broadcast_order_update
+            await broadcast_order_update(order.id, "order_failed")
 
     def is_running(self) -> bool:
         """Проверить работает ли worker"""

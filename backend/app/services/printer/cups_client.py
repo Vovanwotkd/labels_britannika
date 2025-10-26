@@ -45,6 +45,11 @@ class CUPSPrinterClient:
         Returns:
             True если успешно, False при ошибке
         """
+        # DEBUG режим: пропускаем реальную печать
+        if os.getenv("DEBUG_SAVE_PNG", "false").lower() == "true":
+            logger.info(f"🖼️  DEBUG режим: пропускаем отправку на принтер (сохранено в PNG)")
+            return True
+
         try:
             # Проверяем что файл существует
             if not os.path.exists(file_path):
