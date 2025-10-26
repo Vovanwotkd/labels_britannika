@@ -108,10 +108,16 @@ class OrderProcessor:
 
             # Проверяем статус заказа
             # 1. Отменяем заказ если все блюда удалены (totalPieces=0)
-            if total_pieces == 0:
+            #    НО только если в нём уже были блюда (не пустой новый заказ)
+            from app.models import OrderItem
+            existing_items_count = self.db.query(OrderItem).filter(
+                OrderItem.order_id == order.id
+            ).count()
+
+            if total_pieces == 0 and existing_items_count > 0:
                 order.status = "CANCELLED"
                 order.closed_at = datetime.now()
-                logger.info(f"🚫 Order {order.id} cancelled (totalPieces=0)")
+                logger.info(f"🚫 Order {order.id} cancelled (totalPieces=0, had {existing_items_count} items before)")
 
             # 2. Закрываем заказ если оплачен и завершен (даже если не был напечатан)
             elif paid and finished:
