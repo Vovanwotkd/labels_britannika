@@ -145,6 +145,9 @@ async def get_orders(
         jobs_done = len([j for j in all_jobs if j.status == "DONE"])
         jobs_failed = len([j for j in all_jobs if j.status == "FAILED"])
 
+        # Считаем общее количество порций (сумма quantity всех items)
+        items_count = sum(item.quantity for item in order.items)
+
         result.append(OrderListItemSchema(
             id=order.id,
             visit_id=order.visit_id,
@@ -154,7 +157,7 @@ async def get_orders(
             status=order.status,
             created_at=order.created_at,
             updated_at=order.updated_at,
-            items_count=len(order.items),
+            items_count=items_count,
             jobs_count=jobs_count,
             jobs_done=jobs_done,
             jobs_failed=jobs_failed,
