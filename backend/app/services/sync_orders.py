@@ -96,29 +96,12 @@ class OrderSyncService:
                             orders_marked_cancelled += 1
 
                 else:
-                    # Заказ не найден - создаём новый (пропущенный webhook?)
-                    logger.warning(
-                        f"⚠️  Order {visit_id}/{order_ident} not found in DB - creating from RKeeper data"
+                    # Заказ не найден - пропускаем (придёт через webhook)
+                    # Не создаём заказ вручную, т.к. у нас нет информации о блюдах
+                    # GetOrderList возвращает только totalPieces, но не список блюд
+                    logger.debug(
+                        f"⏭️  Order {visit_id}/{order_ident} not found in DB - skipping (will be created by webhook)"
                     )
-
-                    new_order = self._create_order_from_rkeeper(
-                        visit_id,
-                        order_ident,
-                        table_code,
-                        order_sum,
-                        total_pieces,
-                        paid,
-                        finished,
-                    )
-
-                    if new_order:
-                        orders_created += 1
-
-                        # Проверяем начальный статус
-                        if new_order.status == "DONE":
-                            orders_marked_done += 1
-                        elif new_order.status == "CANCELLED":
-                            orders_marked_cancelled += 1
 
             # Сохраняем изменения
             self.db.commit()
@@ -203,62 +186,6 @@ class OrderSyncService:
             )
 
         return updated
-
-    def _create_order_from_rkeeper(
-        self,
-        visit_id: str,
-        order_ident: str,
-        table_code: str,
-        order_sum: float,
-        total_pieces: int,
-        paid: bool,
-        finished: bool,
-    ) -> Order:
-        """
-        Создать заказ из данных RKeeper (для пропущенных webhooks)
-
-        Args:
-            visit_id: ID визита
-            order_ident: Идентификатор заказа
-            table_code: Код стола
-            order_sum: Сумма заказа
-            total_pieces: Количество порций
-            paid: Оплачен ли заказ
-            finished: Завершен ли заказ
-
-        Returns:
-            Order объект
-        """
-        # Определяем начальный статус
-        if total_pieces == 0:
-            status = "CANCELLED"
-            closed_at = datetime.now()
-        elif paid and finished:
-            status = "DONE"
-            closed_at = datetime.now()
-        else:
-            status = "NOT_PRINTED"
-            closed_at = None
-
-        order = Order(
-            visit_id=visit_id,
-            order_ident=order_ident,
-            table_code=table_code,
-            order_total=order_sum,
-            status=status,
-            closed_at=closed_at,
-        )
-
-        self.db.add(order)
-        self.db.flush()  # Получаем ID
-
-        logger.info(
-            f"➕ Created order #{order.id} from RKeeper: "
-            f"visit={visit_id}, order={order_ident}, table={table_code}, "
-            f"status={status}, sum={order_sum:.2f}₽"
-        )
-
-        return order
 
 
 # ============================================================================
