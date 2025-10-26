@@ -99,16 +99,28 @@ async def rkeeper_webhook(
 
             # Отправляем WebSocket уведомление
             from app.services.websocket.manager import broadcast_order_update
+
+            # Маппинг RKeeper событий в frontend события
+            rkeeper_event = parsed_data.get('event_type', 'Order Changed')
+            event_mapping = {
+                'New Order': 'new_order',
+                'Order Changed': 'order_updated',
+                'Save Order': 'order_updated',
+                'Quit Order': 'order_updated',
+                'Open Order': 'order_updated',
+            }
+            frontend_event = event_mapping.get(rkeeper_event, 'order_updated')
+
             try:
                 await broadcast_order_update(
                     order_id=result['order_id'],
-                    event_type=parsed_data.get('event_type', 'order_updated'),
+                    event_type=frontend_event,
                     data={
                         "items_count": result.get('items_processed', 0),
                         "jobs_count": result.get('jobs_created', 0),
                     }
                 )
-                logger.debug(f"📢 Sent WebSocket notification for order {result['order_id']}")
+                logger.debug(f"📢 Sent WebSocket notification for order {result['order_id']} (event={frontend_event})")
             except Exception as ws_err:
                 logger.error(f"❌ Failed to send WebSocket notification: {ws_err}")
                 # Не падаем, продолжаем обработку
