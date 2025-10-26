@@ -108,10 +108,10 @@ class OrderProcessor:
 
             # Проверяем статус заказа
             # 1. Отменяем заказ если все блюда удалены (totalPieces=0)
-            if total_pieces == 0 or (event_type == "Quit Order" and total_pieces == 0):
+            if total_pieces == 0:
                 order.status = "CANCELLED"
                 order.closed_at = datetime.now()
-                logger.info(f"🚫 Order {order.id} cancelled (totalPieces=0 or Quit Order with empty order)")
+                logger.info(f"🚫 Order {order.id} cancelled (totalPieces=0)")
 
             # 2. Закрываем заказ если оплачен и завершен (даже если не был напечатан)
             elif paid and finished:
