@@ -114,3 +114,87 @@ async def get_selected_tables(
         }
         for f in filters
     ]
+
+
+@router.get("/tables/filters/status")
+async def get_table_filters_status(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_auth)
+):
+    """
+    Получает статус фильтров столов
+
+    Показывает:
+    - Сколько фильтров активно
+    - Какие столы включены/выключены
+    - Влияет ли фильтр на обработку заказов
+
+    Returns:
+        Статус фильтров
+    """
+    # Все фильтры
+    all_filters = db.query(TableFilter).all()
+    enabled_filters = [f for f in all_filters if f.enabled]
+
+    # Определяем режим работы
+    if len(all_filters) == 0:
+        mode = "ALL_TABLES"
+        description = "Фильтры не настроены. Обрабатываются заказы со ВСЕХ столов."
+    elif len(enabled_filters) == 0:
+        mode = "NO_TABLES"
+        description = "Все фильтры отключены. Обрабатываются заказы со ВСЕХ столов."
+    else:
+        mode = "FILTERED"
+        description = f"Активны {len(enabled_filters)} фильтров. Обрабатываются только заказы с выбранных столов."
+
+    return {
+        "mode": mode,
+        "description": description,
+        "total_filters": len(all_filters),
+        "enabled_filters": len(enabled_filters),
+        "filters": [
+            {
+                "table_code": f.table_code,
+                "table_name": f.table_name or f.table_code,
+                "zone": f.zone,
+                "enabled": f.enabled
+            }
+            for f in all_filters
+        ]
+    }
+
+
+@router.delete("/tables/filters")
+async def clear_table_filters(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """
+    Удаляет все фильтры столов
+
+    После удаления система будет обрабатывать заказы со ВСЕХ столов.
+    Требует прав администратора.
+
+    Returns:
+        Информация об удалённых фильтрах
+    """
+    try:
+        # Считаем количество фильтров перед удалением
+        count = db.query(TableFilter).count()
+
+        # Удаляем все фильтры
+        db.query(TableFilter).delete()
+        db.commit()
+
+        return {
+            "success": True,
+            "message": f"Удалено {count} фильтров столов. Теперь обрабатываются ВСЕ столы.",
+            "deleted_count": count
+        }
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to clear table filters: {str(e)}"
+        )
