@@ -228,7 +228,7 @@ class RKeeperClient:
         """
         xml_request = f'''<?xml version="1.0" encoding="UTF-8"?>
 <RK7Query>
-    <RK7CMD CMD="GetOrder" visit="{visit_id}" order="{order_ident}"/>
+    <RK7CMD CMD="GetOrder" visit="{visit_id}" orderIdent="{order_ident}"/>
 </RK7Query>'''
 
         root = await self._send_request(xml_request)
