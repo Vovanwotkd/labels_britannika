@@ -87,6 +87,19 @@ async def rkeeper_webhook(
             # Всё равно возвращаем 200, чтобы RKeeper не ретраил
             return {"status": "error", "message": "Failed to parse XML"}
 
+        # Фильтруем события - обрабатываем только сохранённые заказы
+        # Игнорируем промежуточные "Order Changed" (когда официант набирает заказ)
+        event_type = parsed_data.get('event_type', '')
+        if event_type not in ['Save Order', 'Quit Order']:
+            logger.info(f"⏭️  Skipping event '{event_type}' (waiting for Save/Quit)")
+            return {
+                "status": "ok",
+                "message": f"Event '{event_type}' skipped (not Save/Quit)",
+                "order_id": None,
+                "items_processed": 0,
+                "jobs_created": 0,
+            }
+
         # Обрабатываем заказ
         processor = OrderProcessor(db)
         result = processor.process(parsed_data)

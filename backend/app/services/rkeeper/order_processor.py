@@ -114,18 +114,20 @@ class OrderProcessor:
                 jobs_created += result["jobs_created"]
 
             # Проверяем статус заказа
-            # 1. Отменяем заказ если все блюда удалены (totalPieces=0)
+            # 1. Отменяем заказ если все блюда удалены (totalPieces=0) и сохранён
             #    НО только если в нём уже были блюда (не пустой новый заказ)
             if total_pieces == 0 and items_before_changes > 0:
                 order.status = "CANCELLED"
                 order.closed_at = datetime.now()
                 logger.info(f"🚫 Order {order.id} cancelled (totalPieces=0, had {items_before_changes} items before)")
 
-            # 2. Закрываем заказ если оплачен и завершен (даже если не был напечатан)
-            elif paid and finished:
-                order.status = "DONE"
-                order.closed_at = datetime.now()
-                logger.info(f"✅ Order {order.id} closed (paid and finished)")
+            # 2. НЕ меняем статус автоматически при оплате/закрытии заказа
+            #    Статус меняется только после печати:
+            #    - NOT_PRINTED → остаётся до печати
+            #    - После успешной печати → DONE (в PrintQueueWorker)
+            #    - После ошибки печати → FAILED (в PrintQueueWorker)
+            # elif paid and finished:
+            #     # Убрано - не меняем статус автоматически
 
             # Сохраняем всё
             self.db.commit()
