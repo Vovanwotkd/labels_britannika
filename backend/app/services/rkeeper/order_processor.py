@@ -104,11 +104,16 @@ class OrderProcessor:
                 OrderItem.order_id == order.id
             ).count()
 
-            # Обрабатываем изменения
+            # Группируем изменения по rk_code (суммируем дубликаты с разными uni)
+            # RKeeper создаёт дубликаты когда пользователь добавляет блюдо,
+            # кликает на другое, потом снова на первое - получаются разные uni
+            grouped_changes = self._group_changes_by_rk_code(changes)
+
+            # Обрабатываем сгруппированные изменения
             items_processed = 0
             jobs_created = 0
 
-            for change in changes:
+            for change in grouped_changes:
                 result = self._process_change(order, change)
                 items_processed += 1
                 jobs_created += result["jobs_created"]
@@ -190,6 +195,78 @@ class OrderProcessor:
 
         # Фильтров нет вообще - обрабатываем все столы
         return True
+
+    def _group_changes_by_rk_code(self, changes: list) -> list:
+        """
+        Группировать изменения по rk_code и суммировать quantities
+
+        RKeeper создаёт дубликаты с разными uni когда пользователь:
+        1. Добавляет блюдо → кликает на другое → кликает на первое снова
+        2. Получается два элемента с одинаковым code но разными uni
+
+        Webhook приходит с несколькими элементами:
+        - Dish code="1140" uni="4" quantity="2000"
+        - Dish code="1140" uni="11" quantity="1000"
+
+        Нужно сгруппировать их в один элемент:
+        - Dish code="1140" quantity="3000" (2000 + 1000)
+
+        Args:
+            changes: Список изменений от parser
+
+        Returns:
+            Список сгруппированных изменений с суммированными quantities
+        """
+        from collections import defaultdict
+
+        # Группируем по rk_code
+        grouped = defaultdict(lambda: {
+            "rk_code": None,
+            "rk_id": None,
+            "name": None,
+            "uni": None,  # Берём первый uni (не важен для OrderItem)
+            "old_quantity": 0,
+            "new_quantity": 0,
+            "delta": 0,
+            "price": 0,
+            "is_new": False,
+            "is_deleted": False,
+        })
+
+        for change in changes:
+            rk_code = change["rk_code"]
+            item = grouped[rk_code]
+
+            # Первое вхождение - заполняем базовые поля
+            if item["rk_code"] is None:
+                item["rk_code"] = rk_code
+                item["rk_id"] = change["rk_id"]
+                item["name"] = change["name"]
+                item["uni"] = change["uni"]
+                item["price"] = change["price"]
+                item["is_new"] = change["is_new"]
+                item["is_deleted"] = change["is_deleted"]
+
+            # Суммируем quantities
+            item["old_quantity"] += change["old_quantity"]
+            item["new_quantity"] += change["new_quantity"]
+            item["delta"] += change["delta"]
+
+        result = list(grouped.values())
+
+        # Логируем группировку если были дубликаты
+        if len(result) < len(changes):
+            logger.debug(f"  🔀 Grouped {len(changes)} changes into {len(result)} items")
+            for item in result:
+                if any(c["rk_code"] == item["rk_code"] for c in changes):
+                    count = sum(1 for c in changes if c["rk_code"] == item["rk_code"])
+                    if count > 1:
+                        logger.debug(
+                            f"     {item['rk_code']} ({item['name']}): "
+                            f"{count} duplicates → quantity={item['new_quantity']}"
+                        )
+
+        return result
 
     def _get_or_create_order(
         self,
