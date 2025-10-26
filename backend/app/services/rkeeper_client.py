@@ -261,6 +261,11 @@ class RKeeperClient:
                 quantity_g = int(dish_elem.get("quantity", 0))
                 quantity = quantity_g // 1000  # Конвертируем граммы в порции (1000г = 1 порция)
 
+                logger.info(
+                    f"📦 GetOrder dish parsed: name='{dish_name}', code={dish_code}, "
+                    f"quantity_raw={quantity_g}, quantity_portions={quantity}"
+                )
+
                 dishes.append({
                     "dish_id": dish_id,
                     "dish_code": dish_code,

@@ -258,6 +258,11 @@ class OrderSyncService:
 
         # Создаём OrderItem для каждого блюда
         for dish in dishes:
+            logger.info(
+                f"  📦 Creating OrderItem: name='{dish['dish_name']}', "
+                f"quantity={dish['quantity']}, quantity_g={dish.get('quantity_g', 'N/A')}"
+            )
+
             order_item = OrderItem(
                 order_id=order.id,
                 rk_code=dish["dish_code"],
@@ -266,6 +271,8 @@ class OrderSyncService:
             )
             self.db.add(order_item)
             self.db.flush()
+
+            logger.info(f"  ✅ OrderItem created: id={order_item.id}, quantity={order_item.quantity}")
 
             # Создаём PrintJob для каждого блюда
             # Получаем TSPL данные из шаблона
