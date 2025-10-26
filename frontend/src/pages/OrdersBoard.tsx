@@ -110,8 +110,15 @@ export default function OrdersBoard() {
 
   // Фильтрация и сортировка заказов
   const sortedOrders = useMemo(() => {
-    // 1. Фильтруем CANCELLED заказы (скрываем их)
-    let filtered = orders.filter((order) => order.status !== 'CANCELLED')
+    // 1. Фильтруем CANCELLED заказы (скрываем их только если не выбран фильтр CANCELLED)
+    let filtered = orders.filter((order) => {
+      // Если выбран конкретный статус в фильтре - не скрываем CANCELLED
+      if (filter.status) {
+        return true
+      }
+      // Если фильтр "Все" - скрываем CANCELLED по умолчанию
+      return order.status !== 'CANCELLED'
+    })
 
     // 2. Сортируем по приоритету статусов
     const statusPriority: Record<string, number> = {
@@ -119,6 +126,7 @@ export default function OrdersBoard() {
       'PRINTING': 1,     // Печатаются - тоже новые
       'FAILED': 2,       // Ошибки - посередине
       'DONE': 3,         // Готовые - внизу
+      'CANCELLED': 4,    // Отменённые - самый низ
     }
 
     filtered.sort((a, b) => {
@@ -135,7 +143,7 @@ export default function OrdersBoard() {
     })
 
     return filtered
-  }, [orders])
+  }, [orders, filter.status])
 
   // Печать всего заказа
   const handlePrintAll = async (orderId: number) => {
@@ -247,6 +255,7 @@ export default function OrdersBoard() {
                   {filter.status === 'NOT_PRINTED' ? 'Новые' :
                    filter.status === 'DONE' ? 'Напечатаны' :
                    filter.status === 'FAILED' ? 'Ошибки' :
+                   filter.status === 'CANCELLED' ? 'Отменённые' :
                    'Все'}
                 </span>
                 <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -261,6 +270,7 @@ export default function OrdersBoard() {
                     { value: 'NOT_PRINTED', label: 'Новые' },
                     { value: 'DONE', label: 'Напечатаны' },
                     { value: 'FAILED', label: 'Ошибки' },
+                    { value: 'CANCELLED', label: 'Отменённые' },
                   ].map((option) => (
                     <button
                       key={option.value}
