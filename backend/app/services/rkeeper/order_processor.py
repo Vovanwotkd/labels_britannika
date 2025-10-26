@@ -104,6 +104,17 @@ class OrderProcessor:
                 OrderItem.order_id == order.id
             ).count()
 
+            # Проверяем есть ли дубликаты блюд (одинаковые rk_code)
+            # Это происходит когда RKeeper создаёт блюдо в разных Session
+            from collections import Counter
+            rk_codes = [change['rk_code'] for change in changes if not change['is_deleted']]
+            rk_code_counts = Counter(rk_codes)
+            has_duplicates = any(count > 1 for count in rk_code_counts.values())
+
+            if has_duplicates:
+                duplicate_codes = [code for code, count in rk_code_counts.items() if count > 1]
+                logger.debug(f"⚠️  Detected duplicate rk_codes: {duplicate_codes}")
+
             # Обрабатываем изменения
             items_processed = 0
             jobs_created = 0
@@ -141,6 +152,7 @@ class OrderProcessor:
                 "message": f"{event_type} processed successfully",
                 "items_processed": items_processed,
                 "jobs_created": jobs_created,
+                "has_duplicates": has_duplicates,
             }
 
         except Exception as e:
