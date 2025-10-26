@@ -123,8 +123,13 @@ class RKeeperXMLParser:
             waiter_code = waiter_elem.get('code') if waiter_elem is not None else None
             waiter_name = waiter_elem.get('name') if waiter_elem is not None else None
 
-            # Парсим изменения из ChangeLog
-            changes = self._parse_changelog(root, order_elem)
+            # Для "Save Order" и "Quit Order" парсим ВСЕ блюда из Session,
+            # а не только изменения из ChangeLog (ChangeLog содержит только delta)
+            if event_type in ['Save Order', 'Quit Order']:
+                changes = self._parse_all_sessions(order_elem)
+            else:
+                # Для остальных событий используем ChangeLog
+                changes = self._parse_changelog(root, order_elem)
 
             result = {
                 "event_type": event_type,
@@ -247,6 +252,118 @@ class RKeeperXMLParser:
                     return dish.get('name', '')
 
         return ''
+
+    def _parse_all_sessions(self, order_elem: ET.Element) -> List[Dict]:
+        """
+        Парсить ВСЕ блюда из всех Session элементов в Order
+
+        Используется для "Save Order" и "Quit Order" чтобы получить
+        ПОЛНОЕ состояние заказа, а не только delta-изменения из ChangeLog.
+
+        RKeeper создаёт дубликаты в разных Session когда пользователь:
+        1. Добавляет блюдо → кликает на другое → снова на первое
+        2. Получаются разные Session с одинаковым code но разными uni
+
+        Этот метод суммирует quantities для дубликатов.
+
+        Args:
+            order_elem: Элемент <Order>
+
+        Returns:
+            Список изменений блюд (аналогично ChangeLog формату)
+        """
+        from collections import defaultdict
+
+        # Группируем блюда по rk_code
+        dishes_dict = defaultdict(lambda: {
+            "rk_code": None,
+            "rk_id": None,
+            "name": None,
+            "quantity": 0,  # Сумма quantity
+            "price": 0,
+            "unis": [],  # Список всех uni для отладки
+        })
+
+        # Проходим по всем Session
+        for session_elem in order_elem.findall('.//Session'):
+            session_uni = session_elem.get('uni', '?')
+            session_state = session_elem.get('state', '?')
+
+            logger.debug(f"  Parsing Session uni={session_uni}, state={session_state}")
+
+            # Проходим по всем Dish в Session
+            for dish_elem in session_elem.findall('Dish'):
+                rk_id = dish_elem.get('id', '')
+                rk_code = dish_elem.get('code', rk_id)
+                name = dish_elem.get('name', '')
+                uni = int(dish_elem.get('uni', 0))
+                quantity_g = int(dish_elem.get('quantity', 0))
+                quantity = quantity_g // 1000  # 1000г = 1 порция
+                price_kopeks = int(dish_elem.get('price', 0))
+                price = price_kopeks / 100.0
+
+                # Проверяем Void (отменённое блюдо)
+                void_elem = dish_elem.find('Void')
+                is_voided = void_elem is not None
+
+                if is_voided:
+                    logger.debug(f"    ⏭️  Skipping voided dish: {name} (uni={uni})")
+                    continue
+
+                if quantity == 0:
+                    logger.debug(f"    ⏭️  Skipping dish with quantity=0: {name} (uni={uni})")
+                    continue
+
+                # Добавляем/суммируем quantity
+                dish_data = dishes_dict[rk_code]
+                if dish_data["rk_code"] is None:
+                    # Первое вхождение
+                    dish_data["rk_code"] = rk_code
+                    dish_data["rk_id"] = rk_id
+                    dish_data["name"] = name
+                    dish_data["price"] = price
+
+                dish_data["quantity"] += quantity
+                dish_data["unis"].append(uni)
+
+                logger.debug(
+                    f"    📦 Dish: code={rk_code}, name='{name}', uni={uni}, "
+                    f"qty={quantity}, total_qty={dish_data['quantity']}"
+                )
+
+        # Преобразуем в формат changes (аналогично ChangeLog)
+        changes = []
+        for rk_code, dish_data in dishes_dict.items():
+            if dish_data["rk_code"] is None:
+                continue
+
+            # Формируем change в формате ChangeLog
+            # old_quantity=0 потому что это "полное состояние", а не delta
+            # new_quantity = текущее количество
+            # delta = new_quantity (всё новое)
+            change = {
+                "rk_code": dish_data["rk_code"],
+                "rk_id": dish_data["rk_id"],
+                "name": dish_data["name"],
+                "uni": dish_data["unis"][0] if dish_data["unis"] else 0,  # Берём первый uni
+                "old_quantity": 0,  # Полное состояние, не delta
+                "new_quantity": dish_data["quantity"],
+                "delta": dish_data["quantity"],  # Всё считаем как новое
+                "price": dish_data["price"],
+                "is_new": False,  # Не помечаем как new (заказ уже существует)
+                "is_deleted": False,
+            }
+
+            changes.append(change)
+
+            # Логируем итоговое количество
+            unis_str = ", ".join(str(u) for u in dish_data["unis"])
+            logger.info(
+                f"  ✅ Parsed dish: code={rk_code}, name='{dish_data['name']}', "
+                f"total_qty={dish_data['quantity']} (from unis: {unis_str})"
+            )
+
+        return changes
 
 
 # ============================================================================

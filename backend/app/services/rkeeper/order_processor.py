@@ -104,19 +104,25 @@ class OrderProcessor:
                 OrderItem.order_id == order.id
             ).count()
 
-            # Группируем изменения по rk_code (суммируем дубликаты с разными uni)
-            # RKeeper создаёт дубликаты когда пользователь добавляет блюдо,
-            # кликает на другое, потом снова на первое - получаются разные uni
-            grouped_changes = self._group_changes_by_rk_code(changes)
+            # Для "Save Order" и "Quit Order" используем ПОЛНУЮ замену блюд
+            # (parser возвращает полное состояние заказа из всех Session)
+            # Для остальных событий - обрабатываем delta-изменения из ChangeLog
+            if event_type in ['Save Order', 'Quit Order']:
+                # ПОЛНАЯ ЗАМЕНА: удаляем старые блюда и создаём новые
+                items_processed, jobs_created = self._replace_all_items(order, changes)
+            else:
+                # DELTA-ОБРАБОТКА: обрабатываем изменения из ChangeLog
+                # Группируем изменения по rk_code (суммируем дубликаты с разными uni)
+                grouped_changes = self._group_changes_by_rk_code(changes)
 
-            # Обрабатываем сгруппированные изменения
-            items_processed = 0
-            jobs_created = 0
+                # Обрабатываем сгруппированные изменения
+                items_processed = 0
+                jobs_created = 0
 
-            for change in grouped_changes:
-                result = self._process_change(order, change)
-                items_processed += 1
-                jobs_created += result["jobs_created"]
+                for change in grouped_changes:
+                    result = self._process_change(order, change)
+                    items_processed += 1
+                    jobs_created += result["jobs_created"]
 
             # Проверяем статус заказа
             # 1. Отменяем заказ если все блюда удалены (totalPieces=0) и сохранён
@@ -195,6 +201,95 @@ class OrderProcessor:
 
         # Фильтров нет вообще - обрабатываем все столы
         return True
+
+    def _replace_all_items(self, order: Order, changes: list) -> tuple[int, int]:
+        """
+        Полная замена всех блюд в заказе
+
+        Используется для "Save Order" и "Quit Order" когда parser
+        возвращает ПОЛНОЕ состояние заказа (все Session), а не delta.
+
+        Логика:
+        1. Удаляем ВСЕ старые OrderItem
+        2. Создаём новые OrderItem из changes
+        3. Создаём PrintJob только для НОВЫХ порций (сравниваем с old quantities)
+
+        Args:
+            order: Order объект
+            changes: Список блюд с полными quantities (из всех Session)
+
+        Returns:
+            (items_processed, jobs_created)
+        """
+        from app.models import OrderItem
+
+        logger.info(f"🔄 Full replace: order_id={order.id}, new_items={len(changes)}")
+
+        # Сохраняем старые quantities для сравнения (чтобы печатать только дельту)
+        old_quantities = {}
+        for old_item in order.items:
+            old_quantities[old_item.rk_code] = old_item.quantity
+
+        # Удаляем ВСЕ старые OrderItem
+        for old_item in list(order.items):
+            logger.debug(f"  ➖ Deleting old item: {old_item.rk_code} × {old_item.quantity}")
+            self.db.delete(old_item)
+
+        self.db.flush()
+
+        # Создаём новые OrderItem и PrintJob
+        items_processed = 0
+        jobs_created = 0
+
+        for change in changes:
+            rk_code = change["rk_code"]
+            new_quantity = change["new_quantity"]
+
+            # Получаем данные блюда из dishes_with_extras.sqlite
+            dish = dishes_db.get_dish_by_rk_code(rk_code)
+            if not dish:
+                logger.warning(f"  ⚠️  Dish {rk_code} not found in database")
+                dish = {
+                    "name": change["name"],
+                    "rkeeper_code": rk_code,
+                    "weight_g": 0,
+                    "calories": 0,
+                    "protein": 0,
+                    "fat": 0,
+                    "carbs": 0,
+                    "ingredients": [],
+                    "has_extra_labels": False,
+                    "extra_labels": [],
+                }
+
+            # Создаём новый OrderItem
+            order_item = OrderItem(
+                order_id=order.id,
+                rk_code=rk_code,
+                dish_name=change["name"],
+                quantity=new_quantity,
+                weight_g=dish["weight_g"],
+            )
+            self.db.add(order_item)
+            self.db.flush()  # Получаем ID
+
+            logger.info(f"  ➕ Created item: {rk_code} ({change['name']}) × {new_quantity}")
+
+            # Печатаем только НОВЫЕ порции (delta)
+            old_qty = old_quantities.get(rk_code, 0)
+            delta = new_quantity - old_qty
+
+            if delta > 0:
+                logger.info(f"  🖨️  Printing {delta} new portions (was {old_qty}, now {new_quantity})")
+                jobs_created += self._create_print_jobs_for_delta(order_item, dish, delta)
+            elif delta < 0:
+                logger.debug(f"  📉 Quantity decreased by {-delta} (was {old_qty}, now {new_quantity})")
+            else:
+                logger.debug(f"  ✔️  Quantity unchanged: {new_quantity}")
+
+            items_processed += 1
+
+        return items_processed, jobs_created
 
     def _group_changes_by_rk_code(self, changes: list) -> list:
         """

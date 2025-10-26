@@ -110,14 +110,8 @@ async def rkeeper_webhook(
                 f"items={result['items_processed']}, jobs={result['jobs_created']}"
             )
 
-            # Синхронизируем quantities через GetOrder API
-            # (RKeeper создаёт дубликаты в разных Session, webhook не знает об этом)
-            try:
-                from app.services.sync_orders import sync_single_order
-                sync_single_order(db, result['order_id'])
-                logger.debug("✅ Synced order quantities from GetOrder")
-            except Exception as sync_err:
-                logger.warning(f"⚠️  Failed to sync order: {sync_err}")
+            # GetOrder sync больше не нужен - parser теперь парсит ВСЕ Session
+            # из webhook XML и правильно суммирует quantities
 
             # Отправляем WebSocket уведомление
             from app.services.websocket.manager import broadcast_order_update
