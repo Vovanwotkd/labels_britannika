@@ -101,7 +101,7 @@ async def get_sync_progress(
     """
     Получить прогресс текущей синхронизации StoreHouse
 
-    Парсит логи sync контейнера и возвращает:
+    Читает файл прогресса sync скрипта:
     - is_running: идёт ли синхронизация
     - progress: процент выполнения (0-100)
     - current: текущее количество обработанных товаров
@@ -110,6 +110,64 @@ async def get_sync_progress(
     - eta: осталось времени
     - errors: количество ошибок
     - extra_labels: найдено дополнительных этикеток
+    """
+    try:
+        import os
+        from pathlib import Path
+
+        # Путь к файлу прогресса (создаётся скриптом синхронизации)
+        progress_file = Path("/app/data/sync_progress.json")
+
+        if not progress_file.exists():
+            return {
+                "is_running": False,
+                "message": "No active synchronization"
+            }
+
+        # Проверяем как давно файл обновлялся (если больше 10 секунд - синхронизация завершена)
+        import time
+        file_age = time.time() - progress_file.stat().st_mtime
+
+        if file_age > 10:
+            return {
+                "is_running": False,
+                "completed": True,
+                "message": "Synchronization completed"
+            }
+
+        # Читаем файл прогресса
+        import json
+        with open(progress_file, 'r') as f:
+            progress_data = json.load(f)
+
+        return {
+            "is_running": True,
+            **progress_data
+        }
+
+    except FileNotFoundError:
+        return {
+            "is_running": False,
+            "message": "No active synchronization"
+        }
+    except json.JSONDecodeError:
+        return {
+            "is_running": False,
+            "error": "Invalid progress file"
+        }
+    except Exception as e:
+        return {
+            "is_running": False,
+            "error": str(e)
+        }
+
+
+@router.get("/progress_old")
+async def get_sync_progress_old(
+    current_user: User = Depends(get_current_user)
+) -> Dict:
+    """
+    Старый метод - парсинг логов через docker (не работает внутри контейнера)
     """
     try:
         # Читаем последние 50 строк логов sync контейнера

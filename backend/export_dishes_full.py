@@ -1188,6 +1188,22 @@ async def main():
                   f"MaxDepth: {stats['max_hierarchy_depth']}",
                   end="", flush=True)
 
+            # Записываем прогресс в файл для API
+            try:
+                progress_data = {
+                    "progress": round(progress, 1),
+                    "current": stats["processed"],
+                    "total": stats["total"],
+                    "speed": round(speed, 1),
+                    "eta_minutes": round(remaining / 60, 1),
+                    "errors": stats["errors"],
+                    "extra_labels": stats["extra_labels_found"]
+                }
+                with open("/app/data/sync_progress.json", "w") as f:
+                    json.dump(progress_data, f)
+            except Exception:
+                pass  # Не ломаем синхронизацию если не удалось записать прогресс
+
             # Сохраняем батч
             if len(batch) >= BATCH_SIZE:
                 save_batch_to_db(conn, batch)
@@ -1257,6 +1273,15 @@ async def main():
 
     # Обновляем время последней синхронизации в backend БД
     update_sync_timestamp()
+
+    # Удаляем файл прогресса (синхронизация завершена)
+    try:
+        import os
+        progress_file = "/app/data/sync_progress.json"
+        if os.path.exists(progress_file):
+            os.remove(progress_file)
+    except Exception:
+        pass
 
     # Финальная статистика
     elapsed_total = time.time() - stats["start_time"]
