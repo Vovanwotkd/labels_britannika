@@ -180,17 +180,31 @@ class PrintQueueWorker:
             if not order_item:
                 raise ValueError(f"OrderItem {job.order_item_id} not found")
 
-            # 3. Получаем данные блюда из dishes_db
-            dish = dishes_db.get_dish_by_rk_code(order_item.rk_code)
-            if not dish:
-                raise ValueError(f"Dish with rk_code={order_item.rk_code} not found in dishes DB")
+            # 3. Получаем фильтры подразделений из настроек
+            selected_departments_setting = db.query(Setting).filter(Setting.key == "selected_departments").first()
+            filters = None
+            if selected_departments_setting and selected_departments_setting.value:
+                try:
+                    import json
+                    filters_dict = json.loads(selected_departments_setting.value)
+                    # Фильтруем пустые списки
+                    filters = {k: v for k, v in filters_dict.items() if v}
+                    if filters:
+                        logger.info(f"[QUEUE] Applying department filters for RK {order_item.rk_code}: {filters}")
+                except (json.JSONDecodeError, TypeError) as e:
+                    logger.warning(f"[QUEUE] Failed to parse selected_departments: {e}")
 
-            # 4. Получаем шаблон
+            # 4. Получаем данные блюда из dishes_db С ФИЛЬТРОМ
+            dish = dishes_db.get_dish_by_rk_code(order_item.rk_code, filters)
+            if not dish:
+                raise ValueError(f"Dish with rk_code={order_item.rk_code} not found in dishes DB (with filters: {filters})")
+
+            # 5. Получаем шаблон
             template = db.query(Template).filter(Template.is_default == True).first()
             if not template:
                 raise ValueError("No default template found")
 
-            # 5. Подготавливаем данные для рендеринга
+            # 6. Подготавливаем данные для рендеринга
             dish_data = {
                 "name": dish["name"],
                 "rk_code": dish["rkeeper_code"],
@@ -203,14 +217,14 @@ class PrintQueueWorker:
                 "label_type": job.label_type or "MAIN",  # label_type is in PrintJob, not OrderItem
             }
 
-            # 6. Генерируем PNG
+            # 7. Генерируем PNG
             logger.info(f"🎨 Генерируем PNG для блюда: {dish_data['name']}")
             renderer = ImageLabelRenderer(template.config)
             png_bytes = renderer.render(dish_data)
 
             logger.info(f"✅ PNG сгенерирован: {len(png_bytes)} bytes ({len(png_bytes)/1024:.2f} KB)")
 
-            # 7. Отправляем на печать через CUPS
+            # 8. Отправляем на печать через CUPS
             cups_client = CUPSPrinterClient(
                 printer_name,
                 cups_server="172.17.0.1",
