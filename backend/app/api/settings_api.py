@@ -148,13 +148,21 @@ async def update_settings_batch(
     updated_count = 0
 
     for setting_update in settings:
+        # Логируем что сохраняется (для отладки selected_departments)
+        if setting_update.key == "selected_departments":
+            logger.info(f"[DEBUG] Saving selected_departments: {setting_update.value[:200]}...")
+
         setting = db.query(Setting).filter(Setting.key == setting_update.key).first()
 
         if setting:
             setting.value = setting_update.value
             updated_count += 1
         else:
-            logger.warning(f"⚠️  Setting '{setting_update.key}' not found, skipping")
+            # Если настройка не существует - создаём её
+            logger.info(f"➕ Creating new setting '{setting_update.key}'")
+            new_setting = Setting(key=setting_update.key, value=setting_update.value)
+            db.add(new_setting)
+            updated_count += 1
 
     db.commit()
 
@@ -389,7 +397,10 @@ async def get_system_info(
         },
         "default_template_id": int(get_setting_value("default_template_id", "1")),
         "default_extra_template_id": int(get_setting_value("default_extra_template_id", "0")) if get_setting_value("default_extra_template_id", "") else None,
-        "selected_departments": json.loads(get_setting_value("selected_departments", "{}")) if get_setting_value("selected_departments", "").strip() else {},
+        "selected_departments": (lambda: (
+            logger.info(f"[DEBUG] selected_departments raw value: '{get_setting_value('selected_departments', '')}'"),
+            json.loads(get_setting_value("selected_departments", "{}")) if get_setting_value("selected_departments", "").strip() else {}
+        )[1])(),
         "templates": templates_list,
         "database": {
             "orders": orders_count,
