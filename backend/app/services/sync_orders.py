@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Order
 from app.services.rkeeper_client import get_rkeeper_client
-from app.api.websocket_api import manager
+from app.services.websocket.manager import broadcast_order_update
 
 logger = logging.getLogger(__name__)
 
@@ -315,11 +315,13 @@ class OrderSyncService:
                 "closed_at": order.closed_at.isoformat() if order.closed_at else None,
             }
 
-            # Отправляем через WebSocket
-            await manager.broadcast({
-                "type": "order_update",
-                "order": order_dict
-            })
+            # Отправляем через WebSocket правильной функцией
+            # Используем event_type, чтобы фронт перезагрузил список заказов
+            await broadcast_order_update(
+                order_id=order.id,
+                event_type="order_updated",  # Фронт проверяет message.event
+                data=order_dict
+            )
 
             logger.debug(f"📡 WebSocket notification sent for order #{order.id}")
 
