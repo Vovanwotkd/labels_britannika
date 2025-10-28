@@ -45,8 +45,8 @@ services:
       # Персистентное хранилище БД
       - ./backend/data:/app/data
 
-      # dishes_with_extras.sqlite (обновляется sync сервисом)
-      - ./dishes_with_extras.sqlite:/app/dishes_with_extras.sqlite:ro
+      # dishes_full.sqlite (обновляется sync сервисом)
+      - ./dishes_full.sqlite:/app/dishes_full.sqlite:ro
 
     networks:
       - britannica-network
@@ -76,7 +76,7 @@ services:
       # Доступ к БД backend для чтения настроек
       - ./backend/data:/app/data:ro
       # SQLite для экспорта товаров (read-write)
-      - ./dishes_with_extras.sqlite:/app/dishes_with_extras.sqlite
+      - ./dishes_full.sqlite:/app/dishes_full.sqlite
     networks:
       - britannica-network
     depends_on:
