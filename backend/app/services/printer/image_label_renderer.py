@@ -279,7 +279,8 @@ class ImageLabelRenderer:
                 show_unit = element.get("showUnit", True)
                 unit = "г" if show_unit else ""
 
-                text = f"Вес: {weight_g}{unit}  Ккал: {calories}"
+                # Округляем калории до целого числа
+                text = f"Вес: {weight_g}{unit}  Ккал: {int(round(calories))}"
                 draw.text((x_px, y_px), text, font=font, fill='black')
 
             elif element_type == "bju":
@@ -289,13 +290,14 @@ class ImageLabelRenderer:
 
                 parts = []
                 if element.get("showProteins", True):
-                    parts.append(f"Б:{protein:.0f}г")
+                    parts.append(f"Б:{int(round(protein))}г")
                 if element.get("showFats", True):
-                    parts.append(f"Ж:{fat:.0f}г")
+                    parts.append(f"Ж:{int(round(fat))}г")
                 if element.get("showCarbs", True):
-                    parts.append(f"У:{carbs:.0f}г")
+                    parts.append(f"У:{int(round(carbs))}г")
 
-                text = " ".join(parts)
+                # Добавляем "на 100г" в конце
+                text = " ".join(parts) + " на 100г"
                 draw.text((x_px, y_px), text, font=font, fill='black')
 
             elif element_type == "composition":
