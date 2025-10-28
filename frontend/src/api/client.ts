@@ -318,6 +318,8 @@ export interface SyncOrdersResponse {
 export const syncApi = {
   getStatus: () => fetchApi<SyncStatus>('/sync/status'),
 
+  getProgress: () => fetchApi<any>('/sync/progress'),
+
   trigger: () =>
     fetchApi<SyncTriggerResponse>('/sync/trigger', {
       method: 'POST',

@@ -22,6 +22,7 @@ export default function SettingsPage() {
   // Состояния синхронизации
   const [syncing, setSyncing] = useState(false)
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null)
+  const [syncProgress, setSyncProgress] = useState<any>(null)
 
   // Редактируемые настройки
   const [printerType, setPrinterType] = useState('tcp')
@@ -165,6 +166,32 @@ export default function SettingsPage() {
       setSyncing(false)
     }
   }
+
+  const loadSyncProgress = async () => {
+    try {
+      const progress = await syncApi.getProgress()
+      setSyncProgress(progress)
+
+      // Если синхронизация завершена, обновляем статус
+      if (progress.completed) {
+        loadSyncStatus()
+      }
+    } catch (error) {
+      console.error('Failed to load sync progress:', error)
+    }
+  }
+
+  // Периодически проверяем прогресс синхронизации
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadSyncProgress()
+    }, 3000) // Каждые 3 секунды
+
+    // Первая загрузка
+    loadSyncProgress()
+
+    return () => clearInterval(interval)
+  }, [])
 
   const testPrinterConnection = async () => {
     try {
@@ -481,6 +508,53 @@ export default function SettingsPage() {
                   </div>
                 )}
               </dl>
+            </div>
+          )}
+
+          {/* Progress Bar */}
+          {syncProgress?.is_running && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-blue-900">
+                  Синхронизация...
+                </h3>
+                <span className="text-sm font-medium text-blue-700">
+                  {syncProgress.progress?.toFixed(1) || 0}%
+                </span>
+              </div>
+
+              {/* Progress bar */}
+              <div className="w-full bg-blue-200 rounded-full h-2.5 mb-3">
+                <div
+                  className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                  style={{ width: `${syncProgress.progress || 0}%` }}
+                ></div>
+              </div>
+
+              {/* Stats */}
+              <div className="grid grid-cols-2 gap-2 text-xs text-blue-800">
+                <div>
+                  <span className="font-medium">Товары:</span>{' '}
+                  {syncProgress.current || 0} / {syncProgress.total || 0}
+                </div>
+                <div>
+                  <span className="font-medium">Скорость:</span>{' '}
+                  {syncProgress.speed?.toFixed(1) || 0} item/sec
+                </div>
+                <div>
+                  <span className="font-medium">Осталось:</span>{' '}
+                  {syncProgress.eta_minutes?.toFixed(1) || 0} мин
+                </div>
+                <div>
+                  <span className="font-medium">Доп. этикетки:</span>{' '}
+                  {syncProgress.extra_labels || 0}
+                </div>
+                {syncProgress.errors > 0 && (
+                  <div className="col-span-2 text-red-600">
+                    <span className="font-medium">Ошибки:</span> {syncProgress.errors}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
