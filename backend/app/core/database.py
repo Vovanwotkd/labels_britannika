@@ -69,7 +69,10 @@ def init_db():
 # ============================================================================
 
 import sqlite3
+import logging
 from typing import Optional, Dict, List
+
+logger = logging.getLogger(__name__)
 
 
 class DishesDB:
@@ -125,13 +128,20 @@ class DishesDB:
 
         # Добавляем фильтры по уровням иерархии
         if filters:
+            logger.info(f"[FILTER] RK code {rk_code}, filters: {filters}")
             for level_name, level_values in filters.items():
                 if level_values:  # Если список не пустой
                     placeholders = ','.join('?' * len(level_values))
                     query += f" AND {level_name}_name IN ({placeholders})"
                     params.extend(level_values)
+        else:
+            logger.warning(f"[FILTER] RK code {rk_code}, NO FILTERS - will take first match!")
 
         query += " LIMIT 1"
+
+        # Логируем финальный запрос
+        logger.debug(f"[SQL] Query: {query}")
+        logger.debug(f"[SQL] Params: {params}")
 
         # Получаем основное блюдо
         cursor.execute(query, params)
