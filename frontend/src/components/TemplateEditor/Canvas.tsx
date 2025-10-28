@@ -153,6 +153,29 @@ export default function Canvas({
     let content = ''
     let bgColor = '#ffffff'
 
+    // Расчёт реальной высоты для многострочных элементов
+    let realHeight = height
+    if (element.type === 'dish_name' || element.type === 'text' || element.type === 'composition') {
+      const fontSize = 'fontSize' in element ? element.fontSize : 14
+      const lineSpacing = 'lineSpacing' in element ? (element.lineSpacing ?? 1.4) : 1.4
+
+      // Примерное количество строк (ширина 50мм, ~10 символов на строку для русского)
+      let estimatedLines = 1
+      if (element.type === 'dish_name') {
+        estimatedLines = 2 // Название обычно 2 строки
+      } else if (element.type === 'composition') {
+        estimatedLines = 'maxLines' in element ? element.maxLines : 3
+      } else if (element.type === 'text') {
+        const textLength = 'content' in element ? (element.content?.length ?? 0) : 0
+        estimatedLines = Math.max(1, Math.ceil(textLength / 30)) // ~30 символов на строку
+      }
+
+      // Реальная высота = количество строк * высота строки * lineSpacing
+      // fontSize в пунктах, конвертируем в мм: 1pt ≈ 0.35mm
+      const lineHeightMm = (fontSize * 0.35) * lineSpacing
+      realHeight = lineHeightMm * estimatedLines * MM_TO_PX
+    }
+
     switch (element.type) {
       case 'logo':
         content = element.imageUrl ? '🖼️' : 'Логотип'
@@ -230,6 +253,30 @@ export default function Canvas({
         }}>
           {content}
         </span>
+
+        {/* Real height indicator - показывает реальную высоту многострочного текста */}
+        {realHeight > height && (
+          <div
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: `${height}px`,
+              width: '100%',
+              height: `${realHeight - height}px`,
+              border: '1px dashed #9c27b0',
+              backgroundColor: 'rgba(156, 39, 176, 0.05)',
+              pointerEvents: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '9px',
+              color: '#9c27b0',
+              fontWeight: 600,
+            }}
+          >
+            Реальная высота текста
+          </div>
+        )}
 
         {/* Resize handle */}
         {isSelected && (
