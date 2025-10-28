@@ -168,7 +168,7 @@ class PrintService:
 
         # Создаём задания для основных этикеток (по количеству порций)
         for i in range(quantity):
-            tspl = main_renderer.render({
+            dish_data = {
                 "name": dish["name"],
                 "rk_code": dish["rkeeper_code"],
                 "weight_g": dish["weight_g"],
@@ -178,12 +178,17 @@ class PrintService:
                 "carbs": dish["carbs"],
                 "ingredients": dish["ingredients"],
                 "label_type": "MAIN"
-            })
+            }
 
-            # Создаём PrintJob (без привязки к order_item_id, т.к. это прямая печать)
+            tspl = main_renderer.render(dish_data)
+
+            # Создаём PrintJob (без привязки к order, т.к. это прямая печать)
             job = PrintJob(
-                order_item_id=None,  # Прямая печать, без заказа
+                order_id=None,  # Прямая печать, без заказа
+                order_item_id=None,
+                label_type="MAIN",
                 tspl_data=tspl,
+                dish_data_json=json.dumps(dish_data, ensure_ascii=False),
                 status="QUEUED",
                 retry_count=0,
                 max_retries=3
@@ -195,8 +200,7 @@ class PrintService:
         if dish.get("has_extra_labels") and dish.get("extra_labels"):
             for extra in dish["extra_labels"]:
                 for i in range(quantity):
-                    # ИСПОЛЬЗУЕМ EXTRA_RENDERER для дополнительных этикеток
-                    tspl = extra_renderer.render({
+                    extra_dish_data = {
                         "name": extra["extra_dish_name"],
                         "rk_code": dish["rkeeper_code"],  # Используем код основного блюда
                         "weight_g": extra["extra_dish_weight_g"],
@@ -206,11 +210,17 @@ class PrintService:
                         "carbs": extra.get("extra_dish_carbs", 0),
                         "ingredients": [],  # Доп. этикетки без состава
                         "label_type": "EXTRA"
-                    })
+                    }
+
+                    # ИСПОЛЬЗУЕМ EXTRA_RENDERER для дополнительных этикеток
+                    tspl = extra_renderer.render(extra_dish_data)
 
                     job = PrintJob(
+                        order_id=None,
                         order_item_id=None,
+                        label_type="EXTRA",
                         tspl_data=tspl,
+                        dish_data_json=json.dumps(extra_dish_data, ensure_ascii=False),
                         status="QUEUED",
                         retry_count=0,
                         max_retries=3

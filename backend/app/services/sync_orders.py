@@ -274,31 +274,16 @@ class OrderSyncService:
 
             logger.info(f"  ✅ OrderItem created: id={order_item.id}, quantity={order_item.quantity}")
 
-            # Создаём PrintJob для каждого блюда
-            # Получаем TSPL данные из шаблона
-            try:
-                renderer = ImageLabelRenderer(self.db)
-                label_data = await renderer.render_label(
-                    dish_name=dish["dish_name"],
-                    dish_code=dish["dish_code"],
-                    table_name=f"Стол {table_code}",
-                    weight_g=dish["quantity_g"],  # Используем граммы для renderer
-                )
+            # ПРИМЕЧАНИЕ: PrintJob создаются в OrderProcessor через webhook,
+            # а не здесь. Этот блок устарел и не используется в текущей системе.
+            # Оставлен для обратной совместимости, но может быть удалён.
 
-                print_job = PrintJob(
-                    order_id=order.id,
-                    order_item_id=order_item.id,
-                    label_type="image",
-                    dish_rid=dish["dish_code"],
-                    tspl_data=None,  # Для image типа не нужен TSPL
-                    status="QUEUED",
-                )
-                self.db.add(print_job)
-
-                logger.debug(f"  ➕ Created print job for {dish['dish_name']}")
-
-            except Exception as e:
-                logger.error(f"  ❌ Failed to create print job for {dish['dish_name']}: {e}")
+            # # Создаём PrintJob для каждого блюда
+            # try:
+            #     # TODO: Этот код устарел, нужно использовать OrderProcessor
+            #     pass
+            # except Exception as e:
+            #     logger.error(f"  ❌ Failed to create print job for {dish['dish_name']}: {e}")
 
         return order
 

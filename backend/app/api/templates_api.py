@@ -4,6 +4,7 @@ Templates API
 """
 
 import logging
+import json
 from typing import List, Optional
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
@@ -350,6 +351,7 @@ async def test_print_template(
             label_type="MAIN",
             dish_rid=None,
             tspl_data=tspl_code,
+            dish_data_json=json.dumps(test_dish_data, ensure_ascii=False),
             status="QUEUED",
         )
 

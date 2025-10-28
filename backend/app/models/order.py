@@ -67,13 +67,15 @@ class PrintJob(Base):
     __tablename__ = "print_jobs"
 
     id = Column(Integer, primary_key=True, index=True)
-    order_id = Column(Integer, ForeignKey("orders.id"), nullable=False, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id"), nullable=True, index=True)
+    # order_id = NULL → прямая печать (без заказа), NOT NULL → печать из заказа
     order_item_id = Column(Integer, ForeignKey("order_items.id"), nullable=True, index=True)
     # order_item_id = NULL → печать всего заказа, NOT NULL → печать конкретного блюда
 
     label_type = Column(String, nullable=False)  # MAIN, EXTRA
     dish_rid = Column(Integer, nullable=True)  # RID блюда из dishes_with_extras
     tspl_data = Column(Text, nullable=False)  # TSPL команды для принтера
+    dish_data_json = Column(Text, nullable=True)  # JSON данные блюда (для CUPS рендеринга)
 
     status = Column(String, nullable=False, default="QUEUED", index=True)
     # Статусы: QUEUED, PRINTING, DONE, FAILED
@@ -83,6 +85,7 @@ class PrintJob(Base):
     error_message = Column(Text, nullable=True)  # Сообщение об ошибке
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    started_at = Column(DateTime(timezone=True), nullable=True)  # Когда начали печать
     printed_at = Column(DateTime(timezone=True), nullable=True)  # Когда напечатали
 
     # Relationships

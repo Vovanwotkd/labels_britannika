@@ -175,56 +175,71 @@ class PrintQueueWorker:
 
             logger.info(f"📝 Используем CUPS принтер: {printer_name}, Darkness: {cups_darkness}")
 
-            # 2. Получаем OrderItem для доступа к данным заказа
-            order_item = db.query(OrderItem).filter(OrderItem.id == job.order_item_id).first()
-            if not order_item:
-                raise ValueError(f"OrderItem {job.order_item_id} not found")
+            # 2. Получаем данные блюда для рендеринга
+            import json
 
-            # 3. Получаем фильтры подразделений из настроек
-            selected_departments_setting = db.query(Setting).filter(Setting.key == "selected_departments").first()
-            filters = None
-            if selected_departments_setting and selected_departments_setting.value:
-                try:
-                    import json
-                    filters_dict = json.loads(selected_departments_setting.value)
-                    # Фильтруем пустые списки
-                    filters = {k: v for k, v in filters_dict.items() if v}
-                    if filters:
-                        logger.info(f"[QUEUE] Applying department filters for RK {order_item.rk_code}: {filters}")
-                except (json.JSONDecodeError, TypeError) as e:
-                    logger.warning(f"[QUEUE] Failed to parse selected_departments: {e}")
+            if job.dish_data_json:
+                # ✅ НОВАЯ ЛОГИКА: используем сохранённые данные (правильно для EXTRA labels)
+                logger.info(f"[QUEUE] Using saved dish_data from PrintJob #{job.id} (type={job.label_type})")
+                dish_data = json.loads(job.dish_data_json)
 
-            # 4. Получаем данные блюда из dishes_db С ФИЛЬТРОМ
-            dish = dishes_db.get_dish_by_rk_code(order_item.rk_code, filters)
-            if not dish:
-                raise ValueError(f"Dish with rk_code={order_item.rk_code} not found in dishes DB (with filters: {filters})")
+            else:
+                # ⚠️ СТАРАЯ ЛОГИКА: для обратной совместимости со старыми PrintJob (до добавления dish_data_json)
+                logger.warning(f"[QUEUE] PrintJob #{job.id} has no dish_data_json, using legacy logic")
 
-            # 5. Получаем шаблон
-            template = db.query(Template).filter(Template.is_default == True).first()
+                order_item = db.query(OrderItem).filter(OrderItem.id == job.order_item_id).first()
+                if not order_item:
+                    raise ValueError(f"OrderItem {job.order_item_id} not found")
+
+                # Получаем фильтры подразделений из настроек
+                selected_departments_setting = db.query(Setting).filter(Setting.key == "selected_departments").first()
+                filters = None
+                if selected_departments_setting and selected_departments_setting.value:
+                    try:
+                        filters_dict = json.loads(selected_departments_setting.value)
+                        filters = {k: v for k, v in filters_dict.items() if v}
+                        if filters:
+                            logger.info(f"[QUEUE] Applying department filters for RK {order_item.rk_code}: {filters}")
+                    except (json.JSONDecodeError, TypeError) as e:
+                        logger.warning(f"[QUEUE] Failed to parse selected_departments: {e}")
+
+                # Получаем данные блюда из dishes_db С ФИЛЬТРОМ
+                dish = dishes_db.get_dish_by_rk_code(order_item.rk_code, filters)
+                if not dish:
+                    raise ValueError(f"Dish with rk_code={order_item.rk_code} not found in dishes DB (with filters: {filters})")
+
+                dish_data = {
+                    "name": dish["name"],
+                    "rk_code": dish["rkeeper_code"],
+                    "weight_g": dish["weight_g"],
+                    "calories": dish["calories"],
+                    "protein": dish["protein"],
+                    "fat": dish["fat"],
+                    "carbs": dish["carbs"],
+                    "ingredients": dish.get("ingredients", []),
+                    "label_type": job.label_type or "MAIN",
+                }
+
+            # 3. Получаем правильный шаблон по label_type (MAIN или EXTRA)
+            label_type = job.label_type or "MAIN"
+            template = db.query(Template).filter(Template.brand_id == label_type).first()
+
             if not template:
-                raise ValueError("No default template found")
+                # Fallback на is_default=True если нет шаблона для brand_id
+                logger.warning(f"[QUEUE] No template found for brand_id='{label_type}', using default")
+                template = db.query(Template).filter(Template.is_default == True).first()
 
-            # 6. Подготавливаем данные для рендеринга
-            dish_data = {
-                "name": dish["name"],
-                "rk_code": dish["rkeeper_code"],
-                "weight_g": dish["weight_g"],
-                "calories": dish["calories"],
-                "protein": dish["protein"],
-                "fat": dish["fat"],
-                "carbs": dish["carbs"],
-                "ingredients": dish.get("ingredients", []),
-                "label_type": job.label_type or "MAIN",  # label_type is in PrintJob, not OrderItem
-            }
+            if not template:
+                raise ValueError(f"No template found for label_type='{label_type}' and no default template")
 
-            # 7. Генерируем PNG
-            logger.info(f"🎨 Генерируем PNG для блюда: {dish_data['name']}")
+            # 4. Генерируем PNG с правильным шаблоном
+            logger.info(f"🎨 Генерируем PNG для блюда: {dish_data['name']} (template: {template.name})")
             renderer = ImageLabelRenderer(template.config)
             png_bytes = renderer.render(dish_data)
 
             logger.info(f"✅ PNG сгенерирован: {len(png_bytes)} bytes ({len(png_bytes)/1024:.2f} KB)")
 
-            # 8. Отправляем на печать через CUPS
+            # 5. Отправляем на печать через CUPS
             cups_client = CUPSPrinterClient(
                 printer_name,
                 cups_server="172.17.0.1",

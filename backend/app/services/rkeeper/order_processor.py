@@ -4,6 +4,7 @@ RKeeper Order Processor
 """
 
 import logging
+import json
 from typing import Dict, Optional
 from datetime import datetime
 from sqlalchemy.orm import Session
@@ -536,7 +537,7 @@ class OrderProcessor:
 
         # Создаём основные этикетки (по количеству порций)
         for i in range(quantity):
-            tspl = renderer.render({
+            dish_data = {
                 "name": dish["name"],
                 "rk_code": dish["rkeeper_code"],
                 "weight_g": dish["weight_g"],
@@ -546,13 +547,16 @@ class OrderProcessor:
                 "carbs": dish["carbs"],
                 "ingredients": dish["ingredients"],
                 "label_type": "MAIN",
-            })
+            }
+
+            tspl = renderer.render(dish_data)
 
             job = PrintJob(
                 order_id=order_item.order_id,
                 order_item_id=order_item.id,
                 label_type="MAIN",
                 tspl_data=tspl,
+                dish_data_json=json.dumps(dish_data, ensure_ascii=False),
                 status="QUEUED",
                 retry_count=0,
                 max_retries=3,
@@ -564,7 +568,7 @@ class OrderProcessor:
         if dish.get("has_extra_labels") and dish.get("extra_labels"):
             for extra in dish["extra_labels"]:
                 for i in range(quantity):
-                    tspl = renderer.render({
+                    extra_dish_data = {
                         "name": extra["extra_dish_name"],
                         "rk_code": dish["rkeeper_code"],
                         "weight_g": extra["extra_dish_weight_g"],
@@ -574,13 +578,16 @@ class OrderProcessor:
                         "carbs": extra.get("extra_dish_carbs", 0),
                         "ingredients": [],
                         "label_type": "EXTRA",
-                    })
+                    }
+
+                    tspl = renderer.render(extra_dish_data)
 
                     job = PrintJob(
                         order_id=order_item.order_id,
                         order_item_id=order_item.id,
                         label_type="EXTRA",
                         tspl_data=tspl,
+                        dish_data_json=json.dumps(extra_dish_data, ensure_ascii=False),
                         status="QUEUED",
                         retry_count=0,
                         max_retries=3,
