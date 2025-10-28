@@ -69,6 +69,9 @@ export default function SettingsPage() {
       setRkLogging(data.rkeeper.logging)
       setDefaultTemplateId(data.default_template_id.toString())
       setDefaultExtraTemplateId(data.default_extra_template_id?.toString() || '')
+
+      // Отладка: логируем загруженные selected_departments
+      console.log('[SettingsPage] Loaded selected_departments from API:', data.selected_departments)
       setSelectedDepartments(data.selected_departments || {})
     } catch (error) {
       console.error('Failed to load system info:', error)
@@ -110,6 +113,9 @@ export default function SettingsPage() {
   const saveSettings = async () => {
     try {
       setSaving(true)
+
+      // Отладка: логируем что сохраняется
+      console.log('[SettingsPage] Saving selected_departments:', selectedDepartments)
 
       const settings = [
         { key: 'printer_type', value: printerType },
