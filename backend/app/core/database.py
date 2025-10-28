@@ -79,8 +79,8 @@ class DishesDB:
     """
 
     def __init__(self, db_path: str = None):
-        # Изменено на новую БД с иерархией
-        self.db_path = db_path or settings.DISHES_DB_PATH.replace("dishes_with_extras.sqlite", "dishes_full.sqlite")
+        # Используем новую БД с иерархией
+        self.db_path = db_path or settings.DISHES_DB_PATH
 
     def get_connection(self) -> sqlite3.Connection:
         """Получить connection к dishes database"""
