@@ -279,8 +279,8 @@ class ImageLabelRenderer:
                 show_unit = element.get("showUnit", True)
                 unit = "г" if show_unit else ""
 
-                # Округляем калории до целого числа
-                text = f"Вес: {weight_g}{unit}  Ккал: {int(round(calories))}"
+                # Округляем калории до целого числа (Калорий, не Ккал!)
+                text = f"Вес: {weight_g}{unit}  Калорий: {int(round(calories))}"
                 draw.text((x_px, y_px), text, font=font, fill='black')
 
             elif element_type == "bju":
