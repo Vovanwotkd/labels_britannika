@@ -50,6 +50,7 @@ export interface TextElement extends BaseElement {
   fontWeight: FontWeight
   color: string
   align: 'left' | 'center' | 'right'
+  lineSpacing?: number // Межстрочный интервал (множитель высоты символа, по умолчанию 1.4)
   fieldName?: string // для динамических полей (dish_name, weight_g и т.д.)
 }
 
@@ -60,6 +61,7 @@ export interface DishNameElement extends BaseElement {
   fontWeight: FontWeight
   color: string
   align: 'left' | 'center' | 'right'
+  lineSpacing?: number // Межстрочный интервал (множитель высоты символа, по умолчанию 1.4)
 }
 
 export interface CompositionElement extends BaseElement {
@@ -69,6 +71,7 @@ export interface CompositionElement extends BaseElement {
   fontWeight: FontWeight
   color: string
   maxLines: number
+  lineSpacing?: number // Межстрочный интервал (множитель высоты символа, по умолчанию 1.4)
 }
 
 export interface BJUElement extends BaseElement {

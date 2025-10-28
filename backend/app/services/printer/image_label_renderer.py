@@ -86,6 +86,7 @@ class ImageLabelRenderer:
     def _wrap_text(self, text: str, font: ImageFont.FreeTypeFont, max_width_px: int) -> list:
         """
         Разбивает текст на строки по словам, чтобы уместиться в max_width_px
+        Если слово слишком длинное, разбивает его посимвольно
 
         Args:
             text: Исходный текст
@@ -113,11 +114,34 @@ class ImageLabelRenderer:
                 if current_line:
                     # Сохраняем текущую строку
                     lines.append(' '.join(current_line))
+                    current_line = []
+
+                # Проверяем, влезает ли само слово
+                word_bbox = font.getbbox(word)
+                word_width = word_bbox[2] - word_bbox[0]
+
+                if word_width <= max_width_px:
+                    # Слово влезает само по себе
                     current_line = [word]
                 else:
-                    # Даже одно слово не влезает - добавляем как есть
-                    lines.append(word)
-                    current_line = []
+                    # Слово слишком длинное, нужно разбить посимвольно
+                    char_buffer = ""
+                    for char in word:
+                        test_buffer = char_buffer + char
+                        test_bbox = font.getbbox(test_buffer)
+                        test_width = test_bbox[2] - test_bbox[0]
+
+                        if test_width <= max_width_px:
+                            char_buffer += char
+                        else:
+                            # Буфер заполнен, сохраняем как строку
+                            if char_buffer:
+                                lines.append(char_buffer)
+                            char_buffer = char
+
+                    # Остаток слова переходит в current_line
+                    if char_buffer:
+                        current_line = [char_buffer]
 
         # Добавляем последнюю строку
         if current_line:
@@ -248,7 +272,8 @@ class ImageLabelRenderer:
 
                     # Рисуем каждую строку с межстрочным интервалом
                     char_height = font.getbbox("Аy")[3] - font.getbbox("Аy")[1]
-                    line_height = int(char_height * 1.4)  # Добавляем 40% для межстрочного интервала
+                    line_spacing = element.get("lineSpacing", 1.4)  # Межстрочный интервал из шаблона
+                    line_height = int(char_height * line_spacing)
                     for i, line in enumerate(lines):
                         draw.text((x_px, y_px + i * line_height), line, font=font, fill='black')
 
@@ -271,7 +296,8 @@ class ImageLabelRenderer:
 
                     # Рисуем каждую строку с межстрочным интервалом
                     char_height = font.getbbox("Аy")[3] - font.getbbox("Аy")[1]
-                    line_height = int(char_height * 1.4)  # Добавляем 40% для межстрочного интервала
+                    line_spacing = element.get("lineSpacing", 1.4)  # Межстрочный интервал из шаблона
+                    line_height = int(char_height * line_spacing)
                     for i, line in enumerate(lines):
                         draw.text((x_px, y_px + i * line_height), line, font=font, fill='black')
 
@@ -322,7 +348,8 @@ class ImageLabelRenderer:
 
                     # Рисуем каждую строку с межстрочным интервалом
                     char_height = font.getbbox("Аy")[3] - font.getbbox("Аy")[1]
-                    line_height = int(char_height * 1.4)  # Добавляем 40% для межстрочного интервала
+                    line_spacing = element.get("lineSpacing", 1.4)  # Межстрочный интервал из шаблона
+                    line_height = int(char_height * line_spacing)
                     for i, line in enumerate(lines):
                         draw.text((x_px, y_px + i * line_height), line, font=font, fill='black')
 

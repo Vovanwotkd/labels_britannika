@@ -425,6 +425,38 @@ export default function PropertiesPanel({
         </>
       )}
 
+      {/* Line Spacing - only for multiline text elements */}
+      {(element.type === 'dish_name' || element.type === 'text' || element.type === 'composition') && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Межстрочный интервал: {
+              'lineSpacing' in element && element.lineSpacing !== undefined
+                ? element.lineSpacing.toFixed(1)
+                : '1.4'
+            }x
+          </label>
+          <input
+            type="range"
+            min="1.0"
+            max="2.5"
+            step="0.1"
+            value={
+              'lineSpacing' in element && element.lineSpacing !== undefined
+                ? element.lineSpacing
+                : 1.4
+            }
+            onChange={(e) => onUpdate({ lineSpacing: parseFloat(e.target.value) })}
+            className="block w-full"
+          />
+          <div className="flex justify-between text-xs text-gray-500 mt-1">
+            <span>1.0 (плотно)</span>
+            <span>1.4 (норма)</span>
+            <span>2.0 (разреженно)</span>
+            <span>2.5 (очень разреженно)</span>
+          </div>
+        </div>
+      )}
+
       {/* Visibility */}
       <div>
         <label className="flex items-center text-sm">
