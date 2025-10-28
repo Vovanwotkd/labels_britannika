@@ -16,7 +16,9 @@ interface CanvasProps {
   onElementResize: (id: string, width: number, height: number) => void
 }
 
-const MM_TO_PX = 8 // Увеличенный масштаб для удобства редактирования
+// Масштаб совпадает с принтером: 203 DPI / 25.4 mm/inch ≈ 8 px/mm
+// Для увеличения используйте зум в интерфейсе редактора
+const MM_TO_PX = 8
 
 export default function Canvas({
   width,
@@ -113,8 +115,36 @@ export default function Canvas({
     })
   }
 
+  // Проверка пересечения двух элементов
+  const checkOverlap = (el1: TemplateElement, el2: TemplateElement): boolean => {
+    const left1 = el1.position.x
+    const right1 = el1.position.x + el1.size.width
+    const top1 = el1.position.y
+    const bottom1 = el1.position.y + el1.size.height
+
+    const left2 = el2.position.x
+    const right2 = el2.position.x + el2.size.width
+    const top2 = el2.position.y
+    const bottom2 = el2.position.y + el2.size.height
+
+    // Проверяем пересечение по обеим осям
+    return !(right1 <= left2 || right2 <= left1 || bottom1 <= top2 || bottom2 <= top1)
+  }
+
+  // Проверка, накладывается ли элемент на другие
+  const hasOverlap = (element: TemplateElement): boolean => {
+    return elements.some(
+      (other) =>
+        other.id !== element.id &&
+        other.visible &&
+        element.visible &&
+        checkOverlap(element, other)
+    )
+  }
+
   const renderElement = (element: TemplateElement) => {
     const isSelected = element.id === selectedElementId
+    const isOverlapping = hasOverlap(element)
     const left = element.position.x * MM_TO_PX
     const top = element.position.y * MM_TO_PX
     const width = element.size.width * MM_TO_PX
@@ -168,19 +198,38 @@ export default function Canvas({
           top: `${top}px`,
           width: `${width}px`,
           height: `${height}px`,
-          border: isSelected ? '2px solid #2196F3' : '1px solid #ccc',
-          backgroundColor: bgColor,
+          border: isSelected
+            ? '2px solid #2196F3'
+            : isOverlapping
+            ? '2px solid #ff9800'
+            : '1px solid #ccc',
+          backgroundColor: isOverlapping ? '#fff3e0' : bgColor,
           cursor: 'move',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: '12px',
+          fontSize: '11px',
           overflow: 'hidden',
           userSelect: 'none',
-          boxShadow: isSelected ? '0 0 8px rgba(33, 150, 243, 0.5)' : 'none',
+          boxShadow: isSelected
+            ? '0 0 8px rgba(33, 150, 243, 0.5)'
+            : isOverlapping
+            ? '0 0 6px rgba(255, 152, 0, 0.5)'
+            : 'none',
+          // Всегда используем тёмный текст на canvas для видимости
+          color: '#333',
+          fontWeight: 500,
+          padding: '2px',
         }}
       >
-        {content}
+        <span style={{
+          maxWidth: '100%',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}>
+          {content}
+        </span>
 
         {/* Resize handle */}
         {isSelected && (
@@ -253,6 +302,29 @@ export default function Canvas({
       >
         {width} × {height} мм
       </div>
+
+      {/* Overlap warning */}
+      {elements.filter((el) => el.visible && hasOverlap(el)).length > 0 && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '4px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            fontSize: '11px',
+            color: '#f57c00',
+            backgroundColor: 'rgba(255, 243, 224, 0.95)',
+            padding: '4px 10px',
+            borderRadius: '4px',
+            border: '1px solid #ff9800',
+            pointerEvents: 'none',
+            fontWeight: 600,
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+          }}
+        >
+          ⚠️ Элементы накладываются друг на друга
+        </div>
+      )}
     </div>
   )
 }
