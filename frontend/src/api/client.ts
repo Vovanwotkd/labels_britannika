@@ -344,3 +344,26 @@ export const printersApi = {
   getStatus: (printerName: string) =>
     fetchApi<PrinterInfo>(`/printers/${encodeURIComponent(printerName)}/status`),
 }
+
+// ============================================================================
+// Departments API
+// ============================================================================
+
+export interface DepartmentLevel {
+  name: string
+  count: number
+}
+
+export interface DepartmentsTreeResponse {
+  level_1: DepartmentLevel[]
+  level_2: DepartmentLevel[]
+  level_3: DepartmentLevel[]
+  level_4: DepartmentLevel[]
+  level_5: DepartmentLevel[]
+  level_6: DepartmentLevel[]
+  error?: string
+}
+
+export const departmentsApi = {
+  getTree: () => fetchApi<DepartmentsTreeResponse>('/departments/tree'),
+}

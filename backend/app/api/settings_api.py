@@ -4,6 +4,7 @@ Settings API
 """
 
 import logging
+import json
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -387,6 +388,8 @@ async def get_system_info(
             "logging": get_setting_value("rkeeper_logging", "false").lower() in ("true", "1", "yes", "y"),
         },
         "default_template_id": int(get_setting_value("default_template_id", "1")),
+        "default_extra_template_id": int(get_setting_value("default_extra_template_id", "0")) if get_setting_value("default_extra_template_id", "") else None,
+        "selected_departments": json.loads(get_setting_value("selected_departments", "{}")) if get_setting_value("selected_departments") else None,
         "templates": templates_list,
         "database": {
             "orders": orders_count,

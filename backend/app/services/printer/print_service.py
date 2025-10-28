@@ -4,12 +4,13 @@ Print Service - высокоуровневый API для печати
 """
 
 import logging
-from typing import Dict, Optional
+import json
+from typing import Dict, Optional, List
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import dishes_db
-from app.models import Template, PrintJob, Order, OrderItem
+from app.models import Template, PrintJob, Order, OrderItem, Setting
 from app.services.printer.tspl_renderer import TSPLRenderer
 from app.services.printer.tcp_client import PrinterClient
 
@@ -41,7 +42,7 @@ class PrintService:
 
     def _get_default_template(self) -> Template:
         """
-        Получить шаблон по умолчанию
+        Получить шаблон по умолчанию (для основных блюд)
 
         Returns:
             Template объект
@@ -55,9 +56,57 @@ class PrintService:
 
         return template
 
+    def _get_extra_template(self) -> Template:
+        """
+        Получить шаблон для дополнительных этикеток
+
+        Returns:
+            Template объект
+        """
+        # Пытаемся получить шаблон из настроек
+        extra_template_setting = self.db.query(Setting).filter(
+            Setting.key == "default_extra_template_id"
+        ).first()
+
+        if extra_template_setting and extra_template_setting.value:
+            try:
+                template_id = int(extra_template_setting.value)
+                template = self.db.query(Template).filter(Template.id == template_id).first()
+                if template:
+                    return template
+            except (ValueError, TypeError):
+                pass
+
+        # Если не настроен, используем основной шаблон
+        logger.debug("Шаблон для доп. этикеток не настроен, используем основной")
+        return self._get_default_template()
+
+    def _get_selected_departments(self) -> Optional[Dict[str, List[str]]]:
+        """
+        Получить выбранные подразделения из настроек
+
+        Returns:
+            Dict с фильтрами или None
+            Пример: {"level_1": ["01 Меню Британника"], "level_2": ["Британника 1"]}
+        """
+        setting = self.db.query(Setting).filter(
+            Setting.key == "selected_departments"
+        ).first()
+
+        if not setting or not setting.value:
+            return None
+
+        try:
+            filters = json.loads(setting.value)
+            # Фильтруем пустые списки
+            return {k: v for k, v in filters.items() if v}
+        except (json.JSONDecodeError, TypeError):
+            logger.warning("Не удалось распарсить selected_departments")
+            return None
+
     def _get_dish_data(self, rk_code: str) -> Optional[Dict]:
         """
-        Получить данные блюда из dishes_with_extras.sqlite
+        Получить данные блюда из dishes_full.sqlite с учётом фильтров
 
         Args:
             rk_code: RKeeper код блюда
@@ -65,10 +114,17 @@ class PrintService:
         Returns:
             Dict с данными блюда или None
         """
-        dish = dishes_db.get_dish_by_rk_code(rk_code)
+        # Получаем фильтры по подразделениям
+        filters = self._get_selected_departments()
+
+        # Получаем блюдо с фильтрацией
+        dish = dishes_db.get_dish_by_rk_code(rk_code, filters)
 
         if not dish:
-            logger.warning(f"Блюдо с RK кодом {rk_code} не найдено в базе")
+            logger.warning(
+                f"Блюдо с RK кодом {rk_code} не найдено "
+                f"{'с учётом фильтров подразделений' if filters else 'в базе'}"
+            )
             return None
 
         return dish
@@ -100,16 +156,19 @@ class PrintService:
                 "message": f"Блюдо {rk_code} не найдено"
             }
 
-        # Получаем шаблон
-        template = self._get_default_template()
-        renderer = TSPLRenderer(template.config)
+        # Получаем шаблоны (основной и для доп. этикеток)
+        main_template = self._get_default_template()
+        extra_template = self._get_extra_template()
+
+        main_renderer = TSPLRenderer(main_template.config)
+        extra_renderer = TSPLRenderer(extra_template.config)
 
         # Счётчик созданных заданий
         queued_count = 0
 
         # Создаём задания для основных этикеток (по количеству порций)
         for i in range(quantity):
-            tspl = renderer.render({
+            tspl = main_renderer.render({
                 "name": dish["name"],
                 "rk_code": dish["rkeeper_code"],
                 "weight_g": dish["weight_g"],
@@ -136,7 +195,8 @@ class PrintService:
         if dish.get("has_extra_labels") and dish.get("extra_labels"):
             for extra in dish["extra_labels"]:
                 for i in range(quantity):
-                    tspl = renderer.render({
+                    # ИСПОЛЬЗУЕМ EXTRA_RENDERER для дополнительных этикеток
+                    tspl = extra_renderer.render({
                         "name": extra["extra_dish_name"],
                         "rk_code": dish["rkeeper_code"],  # Используем код основного блюда
                         "weight_g": extra["extra_dish_weight_g"],

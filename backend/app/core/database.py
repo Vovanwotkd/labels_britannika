@@ -74,12 +74,13 @@ from typing import Optional, Dict, List
 
 class DishesDB:
     """
-    Подключение к dishes_with_extras.sqlite (мастер-база блюд)
+    Подключение к dishes_full.sqlite (мастер-база блюд с иерархией)
     Read-only доступ
     """
 
     def __init__(self, db_path: str = None):
-        self.db_path = db_path or settings.DISHES_DB_PATH
+        # Изменено на новую БД с иерархией
+        self.db_path = db_path or settings.DISHES_DB_PATH.replace("dishes_with_extras.sqlite", "dishes_full.sqlite")
 
     def get_connection(self) -> sqlite3.Connection:
         """Получить connection к dishes database"""
@@ -87,9 +88,18 @@ class DishesDB:
         conn.row_factory = sqlite3.Row  # Возвращать результаты как dict
         return conn
 
-    def get_dish_by_rk_code(self, rk_code: str) -> Optional[Dict]:
+    def get_dish_by_rk_code(self, rk_code: str, filters: Optional[Dict[str, List[str]]] = None) -> Optional[Dict]:
         """
-        Получить блюдо по RKeeper коду
+        Получить блюдо по RKeeper коду с фильтрацией по подразделениям
+
+        Args:
+            rk_code: RKeeper код блюда
+            filters: Фильтр по уровням иерархии, например:
+                {
+                    "level_1": ["01 Меню Британника"],
+                    "level_2": ["Британника 1", "Британника 2"],
+                    "level_3": ["Горячие блюда"]
+                }
 
         Returns:
             {
@@ -109,11 +119,22 @@ class DishesDB:
         conn = self.get_connection()
         cursor = conn.cursor()
 
+        # Базовый запрос
+        query = "SELECT * FROM dishes WHERE rkeeper_code = ?"
+        params = [rk_code]
+
+        # Добавляем фильтры по уровням иерархии
+        if filters:
+            for level_name, level_values in filters.items():
+                if level_values:  # Если список не пустой
+                    placeholders = ','.join('?' * len(level_values))
+                    query += f" AND {level_name}_name IN ({placeholders})"
+                    params.extend(level_values)
+
+        query += " LIMIT 1"
+
         # Получаем основное блюдо
-        cursor.execute(
-            "SELECT * FROM dishes WHERE rkeeper_code = ?",
-            (rk_code,)
-        )
+        cursor.execute(query, params)
         dish_row = cursor.fetchone()
 
         if not dish_row:
@@ -150,6 +171,43 @@ class DishesDB:
 
         conn.close()
         return dish
+
+    def get_departments_tree(self, max_levels: int = 6) -> Dict:
+        """
+        Получить древовидную структуру подразделений
+
+        Args:
+            max_levels: Максимальное количество уровней (по умолчанию 6)
+
+        Returns:
+            {
+                "level_1": [{"name": "...", "count": 123}, ...],
+                "level_2": [{"name": "...", "count": 456}, ...],
+                ...
+            }
+        """
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        result = {}
+
+        for level in range(1, max_levels + 1):
+            level_name = f"level_{level}"
+            query = f"""
+                SELECT DISTINCT {level_name}_name AS name, COUNT(*) AS count
+                FROM dishes
+                WHERE {level_name}_name IS NOT NULL
+                GROUP BY {level_name}_name
+                ORDER BY {level_name}_name
+            """
+
+            cursor.execute(query)
+            rows = cursor.fetchall()
+
+            result[level_name] = [{"name": row["name"], "count": row["count"]} for row in rows]
+
+        conn.close()
+        return result
 
 
 # Глобальный экземпляр DishesDB

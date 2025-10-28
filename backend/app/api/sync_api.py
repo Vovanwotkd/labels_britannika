@@ -48,7 +48,7 @@ async def trigger_sync(
         # Запускаем sync скрипт в фоне
         # Используем subprocess для запуска скрипта асинхронно
         process = subprocess.Popen(
-            ["python", "/app/export_dishes_with_extras.py"],
+            ["python", "/app/export_dishes_full.py"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True

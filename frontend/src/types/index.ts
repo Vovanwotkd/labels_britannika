@@ -170,6 +170,8 @@ export interface SystemInfo {
     logging: boolean
   }
   default_template_id: number
+  default_extra_template_id: number | null
+  selected_departments: Record<string, string[]> | null
   templates: Template[]
   database: {
     orders: number

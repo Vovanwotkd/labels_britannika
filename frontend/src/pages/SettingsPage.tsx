@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react'
 import { settingsApi, testConnectionApi, syncApi, printersApi } from '../api/client'
 import type { SystemInfo } from '../types'
 import type { SyncStatus } from '../api/client'
+import DepartmentTreeSelect from '../components/DepartmentTreeSelect'
 
 export default function SettingsPage() {
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null)
@@ -38,6 +39,8 @@ export default function SettingsPage() {
   const [rkPass, setRkPass] = useState('')
   const [rkLogging, setRkLogging] = useState(false)
   const [defaultTemplateId, setDefaultTemplateId] = useState('')
+  const [defaultExtraTemplateId, setDefaultExtraTemplateId] = useState('')
+  const [selectedDepartments, setSelectedDepartments] = useState<Record<string, string[]>>({})
   const [syncIntervalHours, setSyncIntervalHours] = useState('')
 
   useEffect(() => {
@@ -65,6 +68,8 @@ export default function SettingsPage() {
       setRkPass(data.rkeeper.pass)
       setRkLogging(data.rkeeper.logging)
       setDefaultTemplateId(data.default_template_id.toString())
+      setDefaultExtraTemplateId(data.default_extra_template_id?.toString() || '')
+      setSelectedDepartments(data.selected_departments || {})
     } catch (error) {
       console.error('Failed to load system info:', error)
     } finally {
@@ -120,6 +125,8 @@ export default function SettingsPage() {
         { key: 'rkeeper_pass', value: rkPass },
         { key: 'rkeeper_logging', value: rkLogging ? 'true' : 'false' },
         { key: 'default_template_id', value: defaultTemplateId },
+        { key: 'default_extra_template_id', value: defaultExtraTemplateId },
+        { key: 'selected_departments', value: JSON.stringify(selectedDepartments) },
         { key: 'sync_interval_hours', value: syncIntervalHours },
       ]
 
@@ -578,24 +585,62 @@ export default function SettingsPage() {
 
       {/* Template Settings (Editable) */}
       <div className="bg-white shadow rounded-lg p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Шаблон по умолчанию</h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Шаблоны этикеток</h2>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Шаблон
-          </label>
-          <select
-            value={defaultTemplateId}
-            onChange={(e) => setDefaultTemplateId(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-          >
-            {systemInfo.templates.map((template) => (
-              <option key={template.id} value={template.id}>
-                {template.name} {template.brand_id !== 'default' && `(${template.brand_id})`}
-              </option>
-            ))}
-          </select>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Шаблон для основных блюд
+            </label>
+            <select
+              value={defaultTemplateId}
+              onChange={(e) => setDefaultTemplateId(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              {systemInfo.templates.map((template) => (
+                <option key={template.id} value={template.id}>
+                  {template.name} {template.brand_id !== 'default' && `(${template.brand_id})`}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Шаблон для дополнительных этикеток (соусы, гарниры)
+            </label>
+            <select
+              value={defaultExtraTemplateId}
+              onChange={(e) => setDefaultExtraTemplateId(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              <option value="">Использовать основной шаблон</option>
+              {systemInfo.templates.map((template) => (
+                <option key={template.id} value={template.id}>
+                  {template.name} {template.brand_id !== 'default' && `(${template.brand_id})`}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-500">
+              Если не выбран, будет использоваться основной шаблон для всех этикеток
+            </p>
+          </div>
         </div>
+      </div>
+
+      {/* Departments Filter (Editable) */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">
+          Фильтр подразделений
+        </h2>
+        <p className="text-sm text-gray-600 mb-4">
+          Выберите подразделения из которых берутся блюда. Используется для фильтрации
+          дублей по RKeeper кодам из разных ресторанов.
+        </p>
+        <DepartmentTreeSelect
+          value={selectedDepartments}
+          onChange={setSelectedDepartments}
+        />
       </div>
 
       {/* Save Button */}
