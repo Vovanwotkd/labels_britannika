@@ -32,6 +32,11 @@ export default function DepartmentTreeSelect({ value, onChange }: DepartmentTree
     loadTree()
   }, [])
 
+  // Отладка: логируем когда меняется value
+  useEffect(() => {
+    console.log('[DepartmentTreeSelect] value changed:', value)
+  }, [value])
+
   const loadTree = async () => {
     try {
       setLoading(true)
