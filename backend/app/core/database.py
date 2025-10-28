@@ -153,12 +153,13 @@ class DishesDB:
 
         dish = dict(dish_row)
 
-        # Получаем ингредиенты
+        # Получаем ингредиенты и очищаем от переносов строк
         cursor.execute(
             "SELECT name FROM ingredients WHERE dish_rid = ?",
             (dish['rid'],)
         )
-        dish['ingredients'] = [row['name'] for row in cursor.fetchall()]
+        # Удаляем \r\n, \n, \r из ингредиентов (битые данные из StoreHouse)
+        dish['ingredients'] = [row['name'].replace('\r\n', '').replace('\n', '').replace('\r', '').strip() for row in cursor.fetchall()]
 
         # Получаем дополнительные этикетки (если есть)
         dish['extra_labels'] = []
