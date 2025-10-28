@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Order
 from app.services.rkeeper_client import get_rkeeper_client
+from app.api.websocket_api import manager
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +96,9 @@ class OrderSyncService:
                         elif existing_order.status == "CANCELLED":
                             orders_marked_cancelled += 1
 
+                        # Отправляем WebSocket уведомление об обновлении
+                        await self._send_order_update(existing_order)
+
                 else:
                     # Заказ не найден - запрашиваем детали и создаём
                     logger.warning(
@@ -116,6 +120,9 @@ class OrderSyncService:
                                 orders_marked_done += 1
                             elif new_order.status == "CANCELLED":
                                 orders_marked_cancelled += 1
+
+                            # Отправляем WebSocket уведомление о новом заказе
+                            await self._send_order_update(new_order)
 
                     except Exception as e:
                         logger.error(f"❌ Failed to create order from RKeeper: {e}")
@@ -286,6 +293,38 @@ class OrderSyncService:
             #     logger.error(f"  ❌ Failed to create print job for {dish['dish_name']}: {e}")
 
         return order
+
+    async def _send_order_update(self, order: Order) -> None:
+        """
+        Отправить WebSocket уведомление об изменении заказа
+
+        Args:
+            order: Order объект
+        """
+        try:
+            # Формируем данные заказа для фронта
+            order_dict = {
+                "id": order.id,
+                "visit_id": order.visit_id,
+                "order_ident": order.order_ident,
+                "table_code": order.table_code,
+                "order_total": float(order.order_total) if order.order_total else 0.0,
+                "status": order.status,
+                "created_at": order.created_at.isoformat() if order.created_at else None,
+                "updated_at": order.updated_at.isoformat() if order.updated_at else None,
+                "closed_at": order.closed_at.isoformat() if order.closed_at else None,
+            }
+
+            # Отправляем через WebSocket
+            await manager.broadcast({
+                "type": "order_update",
+                "order": order_dict
+            })
+
+            logger.debug(f"📡 WebSocket notification sent for order #{order.id}")
+
+        except Exception as e:
+            logger.error(f"❌ Failed to send WebSocket notification for order #{order.id}: {e}")
 
 
 # ============================================================================
