@@ -248,7 +248,7 @@ class ImageLabelRenderer:
 
                     # Рисуем каждую строку с межстрочным интервалом
                     char_height = font.getbbox("Аy")[3] - font.getbbox("Аy")[1]
-                    line_height = int(char_height * 1.2)  # Добавляем 20% для межстрочного интервала
+                    line_height = int(char_height * 1.4)  # Добавляем 40% для межстрочного интервала
                     for i, line in enumerate(lines):
                         draw.text((x_px, y_px + i * line_height), line, font=font, fill='black')
 
@@ -271,7 +271,7 @@ class ImageLabelRenderer:
 
                     # Рисуем каждую строку с межстрочным интервалом
                     char_height = font.getbbox("Аy")[3] - font.getbbox("Аy")[1]
-                    line_height = int(char_height * 1.2)  # Добавляем 20% для межстрочного интервала
+                    line_height = int(char_height * 1.4)  # Добавляем 40% для межстрочного интервала
                     for i, line in enumerate(lines):
                         draw.text((x_px, y_px + i * line_height), line, font=font, fill='black')
 
@@ -322,7 +322,7 @@ class ImageLabelRenderer:
 
                     # Рисуем каждую строку с межстрочным интервалом
                     char_height = font.getbbox("Аy")[3] - font.getbbox("Аy")[1]
-                    line_height = int(char_height * 1.2)  # Добавляем 20% для межстрочного интервала
+                    line_height = int(char_height * 1.4)  # Добавляем 40% для межстрочного интервала
                     for i, line in enumerate(lines):
                         draw.text((x_px, y_px + i * line_height), line, font=font, fill='black')
 
