@@ -349,18 +349,15 @@ export const printersApi = {
 // Departments API
 // ============================================================================
 
-export interface DepartmentLevel {
+export interface TreeNode {
   name: string
   count: number
+  level: number
+  children?: TreeNode[]
 }
 
 export interface DepartmentsTreeResponse {
-  level_1: DepartmentLevel[]
-  level_2: DepartmentLevel[]
-  level_3: DepartmentLevel[]
-  level_4: DepartmentLevel[]
-  level_5: DepartmentLevel[]
-  level_6: DepartmentLevel[]
+  tree: TreeNode[]
   error?: string
 }
 

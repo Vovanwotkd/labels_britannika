@@ -174,40 +174,93 @@ class DishesDB:
 
     def get_departments_tree(self, max_levels: int = 6) -> Dict:
         """
-        Получить древовидную структуру подразделений
+        Получить иерархическую структуру подразделений с parent-child связями
 
         Args:
             max_levels: Максимальное количество уровней (по умолчанию 6)
 
         Returns:
             {
-                "level_1": [{"name": "...", "count": 123}, ...],
-                "level_2": [{"name": "...", "count": 456}, ...],
-                ...
+                "tree": [
+                    {
+                        "name": "01 Меню Британника",
+                        "count": 5764,
+                        "level": 1,
+                        "children": [
+                            {
+                                "name": "Британника 1",
+                                "count": 1200,
+                                "level": 2,
+                                "children": [...]
+                            }
+                        ]
+                    }
+                ]
             }
         """
         conn = self.get_connection()
         cursor = conn.cursor()
 
-        result = {}
+        # Получаем все блюда с полными путями
+        query = """
+            SELECT
+                level_1_name, level_2_name, level_3_name,
+                level_4_name, level_5_name, level_6_name
+            FROM dishes
+        """
+        cursor.execute(query)
+        rows = cursor.fetchall()
 
-        for level in range(1, max_levels + 1):
-            level_name = f"level_{level}"
-            query = f"""
-                SELECT DISTINCT {level_name}_name AS name, COUNT(*) AS count
-                FROM dishes
-                WHERE {level_name}_name IS NOT NULL
-                GROUP BY {level_name}_name
-                ORDER BY {level_name}_name
-            """
+        # Строим дерево
+        def build_tree_level(items, level, parent_path=None):
+            """Рекурсивное построение дерева"""
+            if level > max_levels:
+                return []
 
-            cursor.execute(query)
-            rows = cursor.fetchall()
+            level_col = f"level_{level}_name"
+            grouped = {}
 
-            result[level_name] = [{"name": row["name"], "count": row["count"]} for row in rows]
+            for row in items:
+                # Проверяем parent path
+                if parent_path:
+                    match = True
+                    for i, parent_val in enumerate(parent_path, start=1):
+                        if row[f"level_{i}_name"] != parent_val:
+                            match = False
+                            break
+                    if not match:
+                        continue
+
+                name = row[level_col]
+                if name is None:
+                    continue
+
+                if name not in grouped:
+                    grouped[name] = []
+                grouped[name].append(row)
+
+            result = []
+            for name, group_items in sorted(grouped.items()):
+                node = {
+                    "name": name,
+                    "count": len(group_items),
+                    "level": level,
+                }
+
+                # Рекурсивно строим детей
+                new_parent_path = (parent_path or []) + [name]
+                children = build_tree_level(rows, level + 1, new_parent_path)
+                if children:
+                    node["children"] = children
+
+                result.append(node)
+
+            return result
+
+        tree = build_tree_level(rows, 1)
 
         conn.close()
-        return result
+        return {"tree": tree}
 
 
 # Глобальный экземпляр DishesDB
