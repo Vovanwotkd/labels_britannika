@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     # БАЗА ДАННЫХ
     # ========================================================================
     DATABASE_URL: str = "sqlite:///./britannica.sqlite"
-    DISHES_DB_PATH: str = "/app/dishes_full.sqlite"  # Мастер-база блюд с иерархией (монтируется в docker)
+    DISHES_DB_PATH: str = "/app/data/dishes_full.sqlite"  # Мастер-база блюд с иерархией
 
     # ========================================================================
     # STORE HOUSE 5 (API для загрузки блюд)

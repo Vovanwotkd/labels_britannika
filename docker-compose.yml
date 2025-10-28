@@ -42,11 +42,8 @@ services:
       - DEBUG_SAVE_PNG=${DEBUG_SAVE_PNG:-true}
 
     volumes:
-      # Персистентное хранилище БД
+      # Персистентное хранилище БД (включая dishes_full.sqlite)
       - ./backend/data:/app/data
-
-      # dishes_full.sqlite (обновляется sync сервисом)
-      - ./dishes_full.sqlite:/app/dishes_full.sqlite:ro
 
     networks:
       - britannica-network
@@ -73,10 +70,8 @@ services:
     environment:
       - BACKEND_DB_PATH=/app/data/britannica_labels.db
     volumes:
-      # Доступ к БД backend для чтения настроек
-      - ./backend/data:/app/data:ro
-      # SQLite для экспорта товаров (read-write)
-      - ./dishes_full.sqlite:/app/dishes_full.sqlite
+      # Доступ к БД backend (read-write для dishes_full.sqlite, read для britannica_labels.db)
+      - ./backend/data:/app/data
     networks:
       - britannica-network
     depends_on:
