@@ -246,8 +246,9 @@ class ImageLabelRenderer:
                     # Разбиваем текст на строки
                     lines = self._wrap_text(text, font, max_width_px)
 
-                    # Рисуем каждую строку
-                    line_height = font.getbbox("Аy")[3] - font.getbbox("Аy")[1]
+                    # Рисуем каждую строку с межстрочным интервалом
+                    char_height = font.getbbox("Аy")[3] - font.getbbox("Аy")[1]
+                    line_height = int(char_height * 1.2)  # Добавляем 20% для межстрочного интервала
                     for i, line in enumerate(lines):
                         draw.text((x_px, y_px + i * line_height), line, font=font, fill='black')
 
@@ -268,8 +269,9 @@ class ImageLabelRenderer:
                     # Разбиваем текст на строки
                     lines = self._wrap_text(text, font, max_width_px)
 
-                    # Рисуем каждую строку
-                    line_height = font.getbbox("Аy")[3] - font.getbbox("Аy")[1]
+                    # Рисуем каждую строку с межстрочным интервалом
+                    char_height = font.getbbox("Аy")[3] - font.getbbox("Аy")[1]
+                    line_height = int(char_height * 1.2)  # Добавляем 20% для межстрочного интервала
                     for i, line in enumerate(lines):
                         draw.text((x_px, y_px + i * line_height), line, font=font, fill='black')
 
@@ -318,8 +320,9 @@ class ImageLabelRenderer:
                     lines = self._wrap_text(text, font, max_width_px)
                     lines = lines[:max_lines]  # Ограничиваем количество строк
 
-                    # Рисуем каждую строку
-                    line_height = font.getbbox("Аy")[3] - font.getbbox("Аy")[1]
+                    # Рисуем каждую строку с межстрочным интервалом
+                    char_height = font.getbbox("Аy")[3] - font.getbbox("Аy")[1]
+                    line_height = int(char_height * 1.2)  # Добавляем 20% для межстрочного интервала
                     for i, line in enumerate(lines):
                         draw.text((x_px, y_px + i * line_height), line, font=font, fill='black')
 
