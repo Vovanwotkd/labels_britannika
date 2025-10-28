@@ -39,7 +39,7 @@ services:
       - DEFAULT_SHELF_LIFE_HOURS=${DEFAULT_SHELF_LIFE_HOURS:-6}
 
       # Отладка
-      - DEBUG_SAVE_PNG=${DEBUG_SAVE_PNG:-true}
+      - DEBUG_SAVE_PNG=${DEBUG_SAVE_PNG:-false}
 
     volumes:
       # Персистентное хранилище БД (включая dishes_full.sqlite)
