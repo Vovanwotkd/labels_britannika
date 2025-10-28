@@ -80,7 +80,7 @@ services:
       sh -c "
         while true; do
           echo \"[\$(date)] Starting dishes sync...\"
-          python export_dishes_with_extras.py || echo 'Sync failed'
+          python export_dishes_full.py || echo 'Sync failed'
           echo \"[\$(date)] Sync completed. Next run in 24 hours.\"
           sleep 86400
         done

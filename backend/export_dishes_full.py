@@ -142,6 +142,51 @@ def load_settings_from_db():
         logging.warning("[WARN] Using default values")
         return SH_URL, SH_USER, SH_PASS
 
+def update_sync_timestamp():
+    """
+    Обновить время последней синхронизации в БД backend
+    """
+    import os
+    from datetime import datetime
+
+    db_path = os.environ.get("BACKEND_DB_PATH", "/app/data/britannica_labels.db")
+
+    if not Path(db_path).exists():
+        logging.warning(f"[WARN] Cannot update sync timestamp: DB not found at {db_path}")
+        return
+
+    try:
+        conn = sqlite3.connect(db_path, timeout=10)
+        cursor = conn.cursor()
+
+        # Получаем текущее время в ISO формате
+        now = datetime.now().isoformat()
+
+        # Проверяем существует ли запись
+        cursor.execute("SELECT COUNT(*) FROM settings WHERE key = 'sh5_sync_last'")
+        exists = cursor.fetchone()[0] > 0
+
+        if exists:
+            # Обновляем существующую запись
+            cursor.execute("UPDATE settings SET value = ? WHERE key = 'sh5_sync_last'", (now,))
+        else:
+            # Создаём новую запись
+            cursor.execute("INSERT INTO settings (key, value) VALUES ('sh5_sync_last', ?)", (now,))
+
+        # Очищаем ошибку если была
+        cursor.execute("UPDATE settings SET value = NULL WHERE key = 'sh5_sync_error'")
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        logging.info(f"[OK] Updated sh5_sync_last: {now}")
+        print(f"[OK] Sync timestamp updated: {now}")
+
+    except Exception as e:
+        logging.error(f"[ERROR] Failed to update sync timestamp: {e}")
+        print(f"[ERROR] Failed to update sync timestamp: {e}")
+
 # ============================================================================
 # ЛОГИРОВАНИЕ
 # ============================================================================
@@ -1209,6 +1254,9 @@ async def main():
             print(f"  Level {level}: {unique_level} unique groups")
 
     conn.close()
+
+    # Обновляем время последней синхронизации в backend БД
+    update_sync_timestamp()
 
     # Финальная статистика
     elapsed_total = time.time() - stats["start_time"]
