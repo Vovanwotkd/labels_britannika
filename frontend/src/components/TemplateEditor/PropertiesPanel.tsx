@@ -54,6 +54,7 @@ export default function PropertiesPanel({
           {element.type === 'composition' && 'Состав'}
           {element.type === 'bju' && 'БЖУ'}
           {element.type === 'weight' && 'Вес'}
+          {element.type === 'energy_value' && 'Энергетическая ценность'}
           {element.type === 'datetime' && 'Дата/Время'}
           {element.type === 'shelf_life' && 'Срок годности'}
         </h3>
@@ -295,6 +296,33 @@ export default function PropertiesPanel({
               className="mr-3 w-4 h-4"
             />
             <span className="text-gray-700">Калории</span>
+          </label>
+        </div>
+      )}
+
+      {/* EnergyValue specific */}
+      {element.type === 'energy_value' && (
+        <div className="space-y-3">
+          <div className="text-sm font-medium text-gray-700 mb-2">
+            Отображаемые элементы:
+          </div>
+          <label className="flex items-center text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              checked={element.showKcal}
+              onChange={(e) => onUpdate({ showKcal: e.target.checked })}
+              className="mr-3 w-4 h-4"
+            />
+            <span className="text-gray-700">ккал</span>
+          </label>
+          <label className="flex items-center text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              checked={element.showKj}
+              onChange={(e) => onUpdate({ showKj: e.target.checked })}
+              className="mr-3 w-4 h-4"
+            />
+            <span className="text-gray-700">кДж</span>
           </label>
         </div>
       )}

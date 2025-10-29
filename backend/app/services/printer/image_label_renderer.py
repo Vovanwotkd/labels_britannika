@@ -303,12 +303,11 @@ class ImageLabelRenderer:
 
             elif element_type == "weight":
                 weight_g = dish_data.get("weight_g", 0)
-                calories = dish_data.get("calories", 0)
                 show_unit = element.get("showUnit", True)
                 unit = "г" if show_unit else ""
 
-                # Округляем калории до целого числа (Калорий, не Ккал!)
-                text = f"Вес: {weight_g}{unit}  Калорий: {int(round(calories))}"
+                # Показываем только вес
+                text = f"Вес: {weight_g}{unit}"
                 draw.text((x_px, y_px), text, font=font, fill='black')
 
             elif element_type == "bju":
@@ -318,14 +317,37 @@ class ImageLabelRenderer:
 
                 parts = []
                 if element.get("showProteins", True):
-                    parts.append(f"Б:{int(round(protein))}г")
+                    parts.append(f"белки {int(round(protein))}г")
                 if element.get("showFats", True):
-                    parts.append(f"Ж:{int(round(fat))}г")
+                    parts.append(f"жиры {int(round(fat))}г")
                 if element.get("showCarbs", True):
-                    parts.append(f"У:{int(round(carbs))}г")
+                    parts.append(f"углеводы {int(round(carbs))}г")
 
-                # Добавляем "на 100г" в конце
-                text = " ".join(parts) + " на 100г"
+                # Формат: "белки Xг, жиры Yг, углеводы Zг" (без "на 100г")
+                text = ", ".join(parts)
+                draw.text((x_px, y_px), text, font=font, fill='black')
+
+            elif element_type == "energy_value":
+                # Энергетическая ценность: ккал и кДж на 100г
+                calories = dish_data.get("calories", 0)
+
+                # Calories из БД на 1 кг, делим на 10 для 100г
+                kcal_100g = calories / 10
+
+                # Считаем кДж: ккал * 4.1868
+                kj_100g = kcal_100g * 4.1868
+
+                # Форматируем с запятой (европейский формат) и 1 знаком
+                kcal_str = f"{kcal_100g:.1f}".replace('.', ',')
+                kj_str = f"{kj_100g:.1f}".replace('.', ',')
+
+                parts = []
+                if element.get("showKcal", True):
+                    parts.append(f"{kcal_str} ккал")
+                if element.get("showKj", True):
+                    parts.append(f"{kj_str} кДж")
+
+                text = " / ".join(parts)
                 draw.text((x_px, y_px), text, font=font, fill='black')
 
             elif element_type == "composition":
@@ -358,13 +380,13 @@ class ImageLabelRenderer:
                 date_format = element.get("format", "datetime")
 
                 if date_format == "datetime":
-                    date_str = now.strftime("%d.%m %H:%M")
+                    date_str = now.strftime("%d.%m.%Y %H:%M")  # С годом
                 elif date_format == "date":
                     date_str = now.strftime("%d.%m.%Y")
                 elif date_format == "time":
                     date_str = now.strftime("%H:%M")
                 else:
-                    date_str = now.strftime("%d.%m %H:%M")
+                    date_str = now.strftime("%d.%m.%Y %H:%M")  # С годом по умолчанию
 
                 text = f"{label} {date_str}"
                 draw.text((x_px, y_px), text, font=font, fill='black')

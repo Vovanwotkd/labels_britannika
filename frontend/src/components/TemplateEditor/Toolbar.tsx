@@ -16,6 +16,7 @@ const tools = [
   { type: 'composition' as ElementType, icon: '📋', label: 'Состав' },
   { type: 'bju' as ElementType, icon: '🥗', label: 'БЖУ' },
   { type: 'weight' as ElementType, icon: '⚖️', label: 'Вес' },
+  { type: 'energy_value' as ElementType, icon: '⚡', label: 'Энергетическая ценность' },
   { type: 'datetime' as ElementType, icon: '📅', label: 'Дата/Время' },
   { type: 'shelf_life' as ElementType, icon: '⏰', label: 'Срок годности' },
 ]

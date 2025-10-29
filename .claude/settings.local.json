@@ -7,7 +7,18 @@
       "Bash(git push origin main)",
       "Bash(git add backend/)",
       "Bash(dir \"C:\\Users\\vovan\\lables\\-labels_britannika\\XML (2)\\XML\" /b)",
-      "Bash(findstr /i \"ref\")"
+      "Bash(findstr /i \"ref\")",
+      "Bash(cp:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nFIX: Update config to use dishes_full.sqlite\n\nИсправлено:\n- config.py: DISHES_DB_PATH теперь указывает на dishes_full.sqlite\n- database.py: Убран ненужный replace, используется прямой путь\n\nЭто исправляет ошибку \"no such table: dishes\" в UI фильтра подразделений.\n\n🤖 Generated with Claude Code\nhttps://claude.com/claude-code\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git pull:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nFIX: Update docker-compose and config for dishes_full.sqlite\n\nИсправлено:\n- docker-compose.yml: Volumes теперь монтируют dishes_full.sqlite вместо dishes_with_extras.sqlite\n- config.py: DISHES_DB_PATH использует абсолютный путь /app/dishes_full.sqlite\n\nЭто полностью исправляет ошибку \"no such table: dishes\" - теперь backend будет использовать правильную БД с иерархией.\n\n🤖 Generated with Claude Code\nhttps://claude.com/claude-code\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(dir:*)",
+      "Bash(findstr:*)",
+      "Bash(ssh:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []

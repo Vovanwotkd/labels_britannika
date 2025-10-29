@@ -194,12 +194,16 @@ export default function Canvas({
         bgColor = '#f3e5f5'
         break
       case 'bju':
-        content = 'Б/Ж/У/Ккал'
+        content = 'белки Xг, жиры Yг, углеводы Zг'
         bgColor = '#e8f5e9'
         break
       case 'weight':
-        content = 'Вес: 250г'
+        content = 'Вес: 155.0г'
         bgColor = '#fce4ec'
+        break
+      case 'energy_value':
+        content = '41,1 ккал / 172,1 кДж'
+        bgColor = '#e1f5fe'
         break
       case 'datetime':
         content = element.label || 'Дата:'

@@ -95,6 +95,16 @@ export interface WeightElement extends BaseElement {
   showUnit: boolean // показывать "г" или нет
 }
 
+export interface EnergyValueElement extends BaseElement {
+  type: 'energy_value'
+  fontSize: number
+  fontFamily: FontFamily
+  fontWeight: FontWeight
+  color: string
+  showKcal: boolean // показывать ккал
+  showKj: boolean   // показывать кДж
+}
+
 export interface DateTimeElement extends BaseElement {
   type: 'datetime'
   fontSize: number
@@ -121,6 +131,7 @@ export type TemplateElement =
   | CompositionElement
   | BJUElement
   | WeightElement
+  | EnergyValueElement
   | DateTimeElement
   | ShelfLifeElement
 

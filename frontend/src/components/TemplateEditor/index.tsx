@@ -19,6 +19,7 @@ import {
   CompositionElement,
   BJUElement,
   WeightElement,
+  EnergyValueElement,
   DateTimeElement,
   ShelfLifeElement,
 } from './types'
@@ -134,6 +135,20 @@ export default function TemplateEditor({
           color: '#000000',
           showUnit: true,
         } as WeightElement
+      case 'energy_value':
+        return {
+          id,
+          type: 'energy_value',
+          position,
+          size,
+          visible,
+          fontSize: 12,
+          fontFamily: 'Arial',
+          fontWeight: 400,
+          color: '#000000',
+          showKcal: true,
+          showKj: true,
+        } as EnergyValueElement
       case 'datetime':
         return {
           id,
