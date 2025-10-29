@@ -116,6 +116,25 @@ export default function TemplatesPage() {
     }
   }
 
+  const handleDuplicate = async (id: number) => {
+    try {
+      await templatesApi.duplicate(id)
+      await loadTemplates()
+    } catch (err) {
+      alert('Ошибка копирования шаблона')
+      console.error(err)
+    }
+  }
+
+  const handleExport = (id: number) => {
+    try {
+      templatesApi.export(id)
+    } catch (err) {
+      alert('Ошибка экспорта шаблона')
+      console.error(err)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -193,30 +212,48 @@ export default function TemplatesPage() {
                 <div>Элементов: {template.config.elements?.length || 0}</div>
               </div>
 
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleEdit(template)}
-                  className="flex-1 px-3 py-2 text-sm bg-primary-50 text-primary-700 rounded hover:bg-primary-100"
-                >
-                  Редактировать
-                </button>
-                {!template.is_default && (
+              <div className="space-y-2">
+                <div className="flex gap-2">
                   <button
-                    onClick={() => handleSetDefault(template.id)}
-                    className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
-                    title="Установить по умолчанию"
+                    onClick={() => handleEdit(template)}
+                    className="flex-1 px-3 py-2 text-sm bg-primary-50 text-primary-700 rounded hover:bg-primary-100"
                   >
-                    ⭐
+                    Редактировать
                   </button>
-                )}
-                <button
-                  onClick={() => handleDelete(template.id)}
-                  className="px-3 py-2 text-sm bg-red-50 text-red-700 rounded hover:bg-red-100"
-                  disabled={template.is_default}
-                  title={template.is_default ? 'Нельзя удалить шаблон по умолчанию' : 'Удалить'}
-                >
-                  🗑️
-                </button>
+                  {!template.is_default && (
+                    <button
+                      onClick={() => handleSetDefault(template.id)}
+                      className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                      title="Установить по умолчанию"
+                    >
+                      ⭐
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleDelete(template.id)}
+                    className="px-3 py-2 text-sm bg-red-50 text-red-700 rounded hover:bg-red-100"
+                    disabled={template.is_default}
+                    title={template.is_default ? 'Нельзя удалить шаблон по умолчанию' : 'Удалить'}
+                  >
+                    🗑️
+                  </button>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleDuplicate(template.id)}
+                    className="flex-1 px-3 py-2 text-sm bg-blue-50 text-blue-700 rounded hover:bg-blue-100"
+                    title="Копировать шаблон"
+                  >
+                    📋 Копировать
+                  </button>
+                  <button
+                    onClick={() => handleExport(template.id)}
+                    className="flex-1 px-3 py-2 text-sm bg-green-50 text-green-700 rounded hover:bg-green-100"
+                    title="Экспортировать в JSON"
+                  >
+                    📤 Экспорт
+                  </button>
+                </div>
               </div>
             </div>
           ))}

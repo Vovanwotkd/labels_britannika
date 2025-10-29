@@ -373,3 +373,75 @@ async def test_print_template(
             status_code=500,
             detail=f"Failed to create test print: {str(e)}"
         )
+
+
+@router.post("/{template_id}/duplicate", response_model=TemplateSchema)
+async def duplicate_template(
+    template_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """
+    Копировать шаблон
+
+    Создает копию существующего шаблона с названием "Копия - [название]"
+    Требует прав администратора
+    """
+    template = db.query(Template).filter(Template.id == template_id).first()
+
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+
+    # Создаём копию
+    new_template = Template(
+        name=f"Копия - {template.name}",
+        brand_id=None,  # Копия не имеет brand_id - нужно задать вручную
+        is_default=False,  # Копия не является дефолтной
+        config=template.config,  # Копируем весь config
+    )
+
+    db.add(new_template)
+    db.commit()
+    db.refresh(new_template)
+
+    logger.info(f"📋 Template duplicated: {template.name} -> {new_template.name} (id={new_template.id})")
+
+    return new_template
+
+
+@router.get("/{template_id}/export")
+async def export_template(
+    template_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_auth)
+):
+    """
+    Экспортировать шаблон в JSON
+
+    Возвращает JSON файл для сохранения и последующего импорта
+    Требует аутентификации
+    """
+    from fastapi.responses import JSONResponse
+
+    template = db.query(Template).filter(Template.id == template_id).first()
+
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+
+    # Формируем данные для экспорта
+    export_data = {
+        "name": template.name,
+        "brand_id": template.brand_id,
+        "is_default": template.is_default,
+        "config": template.config
+    }
+
+    logger.info(f"📤 Template exported: {template.name} (id={template.id})")
+
+    # Возвращаем JSON с правильными заголовками для скачивания
+    return JSONResponse(
+        content=export_data,
+        headers={
+            "Content-Disposition": f'attachment; filename="template_{template.brand_id or template.id}.json"'
+        }
+    )

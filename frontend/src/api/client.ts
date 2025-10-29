@@ -285,6 +285,17 @@ export const templatesApi = {
     fetchApi(`/templates/${id}/test-print`, {
       method: 'POST',
     }),
+
+  duplicate: (id: number) =>
+    fetchApi<Template>(`/templates/${id}/duplicate`, {
+      method: 'POST',
+    }),
+
+  export: (id: number) => {
+    // Для экспорта нужно скачать файл
+    const url = `${API_BASE_URL}/templates/${id}/export`
+    window.open(url, '_blank')
+  },
 }
 
 // ============================================================================
