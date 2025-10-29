@@ -206,6 +206,11 @@ class ImageLabelRenderer:
             x_px = int(position.get("x", 10) * self.DPI / 25.4)
             y_px = int(position.get("y", 10) * self.DPI / 25.4)
 
+            # Применяем отступ сверху (может быть отрицательным для подтягивания вверх)
+            margin_top_mm = element.get("marginTop", 0)
+            margin_top_px = int(margin_top_mm * self.DPI / 25.4)
+            y_px = y_px + margin_top_px
+
             font_size = element.get("fontSize", 14)
             font_weight = element.get("fontWeight", 400)
 

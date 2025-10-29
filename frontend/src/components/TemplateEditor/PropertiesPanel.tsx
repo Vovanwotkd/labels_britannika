@@ -150,6 +150,28 @@ export default function PropertiesPanel({
         </div>
       </div>
 
+      {/* Margin Top */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Отступ сверху (мм)
+        </label>
+        <div className="text-xs text-gray-500 mb-2">
+          Можно использовать отрицательные значения для подтягивания элемента вверх
+        </div>
+        <input
+          type="number"
+          step="0.5"
+          value={element.marginTop || 0}
+          onChange={(e) =>
+            onUpdate({
+              marginTop: parseFloat(e.target.value) || 0,
+            })
+          }
+          className="block w-full px-2 py-1 text-sm border border-gray-300 rounded"
+          placeholder="0"
+        />
+      </div>
+
       {/* Logo specific */}
       {element.type === 'logo' && (
         <div>

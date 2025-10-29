@@ -32,6 +32,7 @@ export interface BaseElement {
   position: Position
   size: Size
   visible: boolean
+  marginTop?: number  // Отступ сверху в мм (может быть отрицательным)
 }
 
 export interface LogoElement extends BaseElement {
