@@ -270,12 +270,16 @@ class ImageLabelRenderer:
                     # Разбиваем текст на строки
                     lines = self._wrap_text(text, font, max_width_px)
 
+                    # Компенсируем верхний отступ шрифта для точного позиционирования
+                    bbox = font.getbbox("Аy")
+                    y_offset = -bbox[1]
+
                     # Рисуем каждую строку с межстрочным интервалом
-                    char_height = font.getbbox("Аy")[3] - font.getbbox("Аy")[1]
+                    char_height = bbox[3] - bbox[1]
                     line_spacing = element.get("lineSpacing", 1.4)  # Межстрочный интервал из шаблона
                     line_height = int(char_height * line_spacing)
                     for i, line in enumerate(lines):
-                        draw.text((x_px, y_px + i * line_height), line, font=font, fill='black', anchor='lt')
+                        draw.text((x_px, y_px + y_offset + i * line_height), line, font=font, fill='black', anchor='lt')
 
             elif element_type == "text":
                 # Текстовый элемент с переносом строк
@@ -294,12 +298,16 @@ class ImageLabelRenderer:
                     # Разбиваем текст на строки
                     lines = self._wrap_text(text, font, max_width_px)
 
+                    # Компенсируем верхний отступ шрифта для точного позиционирования
+                    bbox = font.getbbox("Аy")
+                    y_offset = -bbox[1]
+
                     # Рисуем каждую строку с межстрочным интервалом
-                    char_height = font.getbbox("Аy")[3] - font.getbbox("Аy")[1]
+                    char_height = bbox[3] - bbox[1]
                     line_spacing = element.get("lineSpacing", 1.4)  # Межстрочный интервал из шаблона
                     line_height = int(char_height * line_spacing)
                     for i, line in enumerate(lines):
-                        draw.text((x_px, y_px + i * line_height), line, font=font, fill='black', anchor='lt')
+                        draw.text((x_px, y_px + y_offset + i * line_height), line, font=font, fill='black', anchor='lt')
 
             elif element_type == "weight":
                 weight_g = dish_data.get("weight_g", 0)
@@ -308,7 +316,11 @@ class ImageLabelRenderer:
 
                 # Показываем только вес
                 text = f"Вес: {weight_g}{unit}"
-                draw.text((x_px, y_px), text, font=font, fill='black', anchor='lt')
+
+                # Компенсируем верхний отступ шрифта для точного позиционирования
+                bbox = font.getbbox(text)
+                y_offset = -bbox[1]
+                draw.text((x_px, y_px + y_offset), text, font=font, fill='black', anchor='lt')
 
             elif element_type == "bju":
                 protein = dish_data.get("protein", 0)
@@ -325,7 +337,11 @@ class ImageLabelRenderer:
 
                 # Формат: "белки Xг, жиры Yг, углеводы Zг" (без "на 100г")
                 text = ", ".join(parts)
-                draw.text((x_px, y_px), text, font=font, fill='black', anchor='lt')
+
+                # Компенсируем верхний отступ шрифта для точного позиционирования
+                bbox = font.getbbox(text)
+                y_offset = -bbox[1]
+                draw.text((x_px, y_px + y_offset), text, font=font, fill='black', anchor='lt')
 
             elif element_type == "energy_value":
                 # Энергетическая ценность: ккал и кДж на 100г
@@ -348,7 +364,11 @@ class ImageLabelRenderer:
                     parts.append(f"{kj_str} кДж")
 
                 text = " / ".join(parts)
-                draw.text((x_px, y_px), text, font=font, fill='black', anchor='lt')
+
+                # Компенсируем верхний отступ шрифта для точного позиционирования
+                bbox = font.getbbox(text)
+                y_offset = -bbox[1]
+                draw.text((x_px, y_px + y_offset), text, font=font, fill='black', anchor='lt')
 
             elif element_type == "composition":
                 # Состав с переносом строк
@@ -368,12 +388,16 @@ class ImageLabelRenderer:
                     lines = self._wrap_text(text, font, max_width_px)
                     lines = lines[:max_lines]  # Ограничиваем количество строк
 
+                    # Компенсируем верхний отступ шрифта для точного позиционирования
+                    bbox = font.getbbox("Аy")
+                    y_offset = -bbox[1]
+
                     # Рисуем каждую строку с межстрочным интервалом
-                    char_height = font.getbbox("Аy")[3] - font.getbbox("Аy")[1]
+                    char_height = bbox[3] - bbox[1]
                     line_spacing = element.get("lineSpacing", 1.4)  # Межстрочный интервал из шаблона
                     line_height = int(char_height * line_spacing)
                     for i, line in enumerate(lines):
-                        draw.text((x_px, y_px + i * line_height), line, font=font, fill='black', anchor='lt')
+                        draw.text((x_px, y_px + y_offset + i * line_height), line, font=font, fill='black', anchor='lt')
 
             elif element_type == "datetime":
                 label = element.get("label", "Изготовлено:")
@@ -389,7 +413,11 @@ class ImageLabelRenderer:
                     date_str = now.strftime("%d.%m.%Y %H:%M")  # С годом по умолчанию
 
                 text = f"{label} {date_str}"
-                draw.text((x_px, y_px), text, font=font, fill='black', anchor='lt')
+
+                # Компенсируем верхний отступ шрифта для точного позиционирования
+                bbox = font.getbbox(text)
+                y_offset = -bbox[1]
+                draw.text((x_px, y_px + y_offset), text, font=font, fill='black', anchor='lt')
 
             elif element_type == "shelf_life":
                 label = element.get("label", "Годен до:")
@@ -398,7 +426,11 @@ class ImageLabelRenderer:
 
                 date_str = expiry.strftime("%d.%m %H:%M")
                 text = f"{label} {date_str}"
-                draw.text((x_px, y_px), text, font=font, fill='black', anchor='lt')
+
+                # Компенсируем верхний отступ шрифта для точного позиционирования
+                bbox = font.getbbox(text)
+                y_offset = -bbox[1]
+                draw.text((x_px, y_px + y_offset), text, font=font, fill='black', anchor='lt')
 
         # Конвертируем в PNG bytes
         output = io.BytesIO()
