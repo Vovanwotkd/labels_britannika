@@ -38,8 +38,8 @@ services:
       - TZ=${TIMEZONE:-Europe/Kaliningrad}
       - DEFAULT_SHELF_LIFE_HOURS=${DEFAULT_SHELF_LIFE_HOURS:-6}
 
-      # Отладка
-      - DEBUG_SAVE_PNG=${DEBUG_SAVE_PNG:-true}
+      # Отладка (false = печать на принтер, true = сохранение PNG в файл)
+      - DEBUG_SAVE_PNG=${DEBUG_SAVE_PNG:-false}
 
     volumes:
       # Персистентное хранилище БД (включая dishes_full.sqlite)
