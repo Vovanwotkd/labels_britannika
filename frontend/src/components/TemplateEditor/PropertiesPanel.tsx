@@ -32,6 +32,7 @@ export default function PropertiesPanel({
     element.type === 'composition' ||
     element.type === 'bju' ||
     element.type === 'weight' ||
+    element.type === 'energy_value' ||
     element.type === 'datetime' ||
     element.type === 'shelf_life'
 
@@ -41,6 +42,7 @@ export default function PropertiesPanel({
     element.type === 'composition' ||
     element.type === 'bju' ||
     element.type === 'weight' ||
+    element.type === 'energy_value' ||
     element.type === 'datetime' ||
     element.type === 'shelf_life'
 
