@@ -10,6 +10,7 @@ export type ElementType =
   | 'composition'
   | 'bju'
   | 'weight'
+  | 'energy_value'
   | 'datetime'
   | 'shelf_life'
 
