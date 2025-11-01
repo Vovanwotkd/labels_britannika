@@ -189,10 +189,15 @@ class OrderSyncService:
             updated = True
 
         # Проверяем отмену заказа (все блюда удалены)
-        if total_pieces == 0 and order.status not in ["CANCELLED", "DONE"]:
+        # ВАЖНО: Отменяем только если в заказе УЖЕ БЫЛИ блюда (не пустой новый заказ)
+        # Это предотвращает конфликт с webhook который создаёт пустой заказ сначала
+        from app.models import OrderItem
+        items_count = self.db.query(OrderItem).filter(OrderItem.order_id == order.id).count()
+
+        if total_pieces == 0 and items_count > 0 and order.status not in ["CANCELLED", "DONE"]:
             order.status = "CANCELLED"
             order.closed_at = datetime.now()
-            logger.info(f"🚫 Order {order.id} marked as CANCELLED (totalPieces=0)")
+            logger.info(f"🚫 Order {order.id} marked as CANCELLED (totalPieces=0, had {items_count} items)")
             updated = True
 
         # Проверяем завершение заказа (оплачен и закрыт)
@@ -234,7 +239,9 @@ class OrderSyncService:
         dishes = order_details["dishes"]
 
         # Определяем начальный статус
-        if total_pieces == 0:
+        # Отменяем только если есть блюда в dishes но totalPieces=0 (все удалены)
+        # Пустой новый заказ (dishes=[]) не должен быть отменён сразу
+        if total_pieces == 0 and len(dishes) > 0:
             status = "CANCELLED"
             closed_at = datetime.now()
         elif paid and finished:

@@ -24,8 +24,7 @@ class OrderProcessor:
     1. Получаем parsed данные от XML parser
     2. Создаём/обновляем Order в БД
     3. Создаём OrderItem для каждого блюда
-    4. Автоматически создаём PrintJob (статус QUEUED)
-    5. PrintQueueWorker подхватит задания и напечатает
+    4. PrintJob создаются только при ручной печати (клик на заказ в UI)
     """
 
     def __init__(self, db: Session):
@@ -238,9 +237,8 @@ class OrderProcessor:
 
         self.db.flush()
 
-        # Создаём новые OrderItem и PrintJob
+        # Создаём новые OrderItem (PrintJob создаются только при ручной печати)
         items_processed = 0
-        jobs_created = 0
 
         for change in changes:
             rk_code = change["rk_code"]
@@ -276,13 +274,12 @@ class OrderProcessor:
 
             logger.info(f"  ➕ Created item: {rk_code} ({change['name']}) × {new_quantity}")
 
-            # Печатаем только НОВЫЕ порции (delta)
+            # PrintJob НЕ создаются автоматически, только при ручной печати
             old_qty = old_quantities.get(rk_code, 0)
             delta = new_quantity - old_qty
 
             if delta > 0:
-                logger.info(f"  🖨️  Printing {delta} new portions (was {old_qty}, now {new_quantity})")
-                jobs_created += self._create_print_jobs_for_delta(order_item, dish, delta)
+                logger.info(f"  📦 Added {delta} new portions (was {old_qty}, now {new_quantity}) - jobs will be created on manual print")
             elif delta < 0:
                 logger.debug(f"  📉 Quantity decreased by {-delta} (was {old_qty}, now {new_quantity})")
             else:
@@ -290,7 +287,7 @@ class OrderProcessor:
 
             items_processed += 1
 
-        return items_processed, jobs_created
+        return items_processed, 0  # jobs_created = 0 (создаются только при ручной печати)
 
     def _group_changes_by_rk_code(self, changes: list) -> list:
         """
@@ -493,10 +490,9 @@ class OrderProcessor:
 
             logger.debug(f"  📝 Updated order_item #{order_item.id}: {old_qty}→{new_quantity}")
 
-            # Печатаем только НОВЫЕ порции (delta)
+            # PrintJob НЕ создаются автоматически, только при ручной печати
             if delta > 0:
-                logger.debug(f"  🖨️  Printing {delta} new portions")
-                jobs_created = self._create_print_jobs_for_delta(order_item, dish, delta)
+                logger.debug(f"  📦 Added {delta} new portions (jobs will be created on manual print)")
         else:
             # Создаём новый OrderItem
             order_item = OrderItem(
@@ -511,9 +507,8 @@ class OrderProcessor:
 
             logger.debug(f"  ➕ Created order_item #{order_item.id}")
 
-            # Печатаем все порции
-            logger.debug(f"  🖨️  Printing {new_quantity} portions (new item)")
-            jobs_created = self._create_print_jobs(order_item, dish, new_quantity)
+            # PrintJob НЕ создаются автоматически
+            logger.debug(f"  📦 Added {new_quantity} portions (jobs will be created on manual print)")
 
         return {"jobs_created": jobs_created}
 
